@@ -1,17 +1,17 @@
 <title>Eldorado Command Center</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Sora:wght@300;400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800;900&family=Sora:wght@300;400;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Concept : un « centre de commande » sombre, comme un terminal de trading spatial — panneaux de verre
-   flottant sur un fond d'aurore et d'étoiles, objets 3D manipulables, un mode cinéma pour filmer l'écran. */
+/* Concept : un voyage en chapitres à travers l'espace. Une seule scène WebGL derrière la page ; le scroll
+   déplace la caméra d'un objet à l'autre (pièce d'or, globe, ville-calendrier, médaille) pendant que le texte
+   vit au premier plan. Les ventes arrivent une par une : pièces qui tombent, compteur qui roule. */
 :root {
-  --void: #05050c;
-  --panel: rgba(18, 16, 34, 0.62);
-  --panel-hi: rgba(28, 24, 52, 0.75);
-  --line: rgba(160, 150, 255, 0.16);
-  --ink: #f2f0ff;
-  --muted: #9a96bf;
+  --void: #04040b;
+  --ink: #f4f1ff;
+  --muted: #9d98c4;
+  --line: rgba(170, 160, 255, 0.18);
+  --glass: rgba(16, 13, 34, 0.55);
   --gold: #ffc861;
   --rose: #ff4fb4;
   --cyan: #4fe3ff;
@@ -23,617 +23,618 @@
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--void); color: var(--ink); font-family: var(--f-body); min-height: 100%; overflow-x: hidden; }
-#sky { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
-.wrap { position: relative; z-index: 1; max-width: 1480px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 18px 40px; display: grid; gap: 16px; }
+html { background: var(--void); }
+body { margin: 0; background: var(--void); color: var(--ink); font-family: var(--f-body); overflow-x: hidden; }
+#gl, #fx { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#gl { z-index: 0; }
+#fx { z-index: 60; pointer-events: none; }
+.vignette { position: fixed; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(120% 90% at 50% 50%, transparent 55%, rgba(4,4,11,.85)); }
 
-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.brand { display: flex; align-items: center; gap: 12px; }
-.logo { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font: 900 18px var(--f-display); color: #fff;
-  background: conic-gradient(from 210deg, var(--gold), var(--rose), var(--violet), var(--gold)); box-shadow: 0 0 30px rgba(255, 79, 180, .35); }
-.brand h1 { margin: 0; font: 700 17px var(--f-display); letter-spacing: .04em; }
-.brand p { margin: 2px 0 0; font: 400 11px var(--f-mono); color: var(--muted); letter-spacing: .14em; text-transform: uppercase; }
-.hud { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.pill { display: inline-flex; align-items: center; gap: 8px; font: 600 11px var(--f-mono); letter-spacing: .08em; padding: 8px 12px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
-.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 0 rgba(76,240,165,.6); animation: pulse 1.8s infinite; }
-@keyframes pulse { 70% { box-shadow: 0 0 0 10px rgba(76,240,165,0); } 100% { box-shadow: 0 0 0 0 rgba(76,240,165,0); } }
-button.pill { cursor: pointer; color: var(--ink); }
-button.pill:hover { border-color: rgba(160,150,255,.4); }
-button.pill[aria-pressed="true"] { color: var(--gold); border-color: rgba(255,200,97,.5); background: rgba(255,200,97,.1); }
-button.cine { background: linear-gradient(100deg, rgba(255,79,180,.25), rgba(138,107,255,.25)); border-color: rgba(255,79,180,.5); }
+/* ---- HUD / lecteur de chapitres ---- */
+.hud { position: fixed; z-index: 50; top: calc(12px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo { width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; font: 900 17px var(--f-display); color: #fff; background: conic-gradient(from 210deg, var(--gold), var(--rose), var(--violet), var(--gold)); box-shadow: 0 0 26px rgba(255,79,180,.45); }
+.brand b { font: 800 14px var(--f-display); letter-spacing: .06em; }
+.brand small { display: block; font: 400 10px var(--f-mono); color: var(--muted); letter-spacing: .14em; }
+.player { justify-self: center; width: min(560px, 100%); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 8px 12px; border-radius: 18px;
+  background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.player .btns { display: flex; gap: 4px; }
+.player button, .tools button { font: 600 12px var(--f-body); color: var(--ink); background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 10px; height: 30px; min-width: 30px; padding: 0 9px; cursor: pointer; }
+.player button:hover, .tools button:hover { border-color: rgba(255,79,180,.6); }
+.player button.on, .tools button[aria-pressed="true"] { background: rgba(255,79,180,.22); border-color: rgba(255,79,180,.7); color: #fff; }
 button:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.track { min-width: 0; }
+.track .t { font: 600 11px var(--f-mono); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track .t em { font-style: normal; color: var(--gold); }
+.segs { display: flex; gap: 3px; margin-top: 6px; }
+.segs button { flex: 1; height: 4px; min-width: 0; padding: 0; border: 0; border-radius: 4px; background: rgba(255,255,255,.14); overflow: hidden; position: relative; }
+.segs button i { position: absolute; inset: 0; width: 0; background: linear-gradient(90deg, var(--gold), var(--rose)); }
+.tools { display: flex; gap: 6px; align-items: center; }
+.clock { font: 600 11px var(--f-mono); color: var(--muted); padding: 0 6px; white-space: nowrap; }
+.clock .live { color: var(--mint); }
+@media (max-width: 860px) { .hud { grid-template-columns: 1fr auto; } .player { grid-column: 1 / -1; grid-row: 2; } .brand small, .clock { display: none; } }
 
-.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
-.panel { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 22px; padding: 18px; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); overflow: hidden; min-width: 0;
-  transition: transform 1s cubic-bezier(.2,.8,.2,1), opacity .9s, filter .9s, box-shadow .9s; transform-style: preserve-3d; will-change: transform; }
-.panel::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(160deg, rgba(255,255,255,.07), transparent 35%); }
-.ph { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; position: relative; z-index: 2; }
-.ph h2 { margin: 0; font: 600 11px var(--f-mono); letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
-.ph small { font: 400 11px var(--f-mono); color: var(--muted); }
-.hero { grid-column: span 8; }
-.globe { grid-column: span 4; }
-.kpis { grid-column: span 12; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; }
-.city { grid-column: span 6; }
-.heat { grid-column: span 3; }
-.feed { grid-column: span 3; }
-@media (max-width: 1100px) { .hero, .globe, .city { grid-column: span 12; } .heat, .feed { grid-column: span 6; } .kpis { grid-template-columns: repeat(3, minmax(0,1fr)); } }
-@media (max-width: 680px) { .heat, .feed { grid-column: span 12; } .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+/* ---- Chapitres ---- */
+main { position: relative; z-index: 2; }
+.ch { position: relative; height: 230vh; }
+.ch.short { height: 170vh; }
+.stick { position: sticky; top: 0; height: 100vh; display: grid; align-items: center; padding: 110px max(24px, env(safe-area-inset-right, 0px)) 60px max(24px, env(safe-area-inset-left, 0px)); overflow: hidden; }
+.inner { width: min(1320px, 100%); margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; align-items: center; }
+.inner.one { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 860px) { .inner { grid-template-columns: minmax(0, 1fr); } }
+.kicker { font: 600 11px var(--f-mono); letter-spacing: .3em; text-transform: uppercase; color: var(--gold); display: flex; gap: 10px; align-items: center; }
+.kicker::before { content: ""; width: 34px; height: 1px; background: linear-gradient(90deg, var(--gold), transparent); }
+h2 { font: 900 clamp(34px, 5.2vw, 78px)/.95 var(--f-display); letter-spacing: -.02em; margin: 14px 0 16px; text-wrap: balance; }
+h2 .g { background: linear-gradient(100deg, #fff 5%, var(--gold) 40%, var(--rose) 75%, var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.lead { font: 300 17px/1.6 var(--f-body); color: var(--muted); max-width: 46ch; margin: 0; }
+.lead b { color: var(--ink); font-weight: 600; }
+.reveal > * { opacity: 0; transform: translateY(40px); filter: blur(8px); transition: opacity .9s, transform 1.1s cubic-bezier(.16,1,.3,1), filter .9s; }
+.reveal.in > * { opacity: 1; transform: none; filter: none; }
+.reveal.in > *:nth-child(2) { transition-delay: .08s; } .reveal.in > *:nth-child(3) { transition-delay: .16s; } .reveal.in > *:nth-child(4) { transition-delay: .24s; } .reveal.in > *:nth-child(5) { transition-delay: .32s; }
 
-.big { font: 900 clamp(46px, 7vw, 104px)/.9 var(--f-display); letter-spacing: -.03em; font-variant-numeric: tabular-nums;
-  background: linear-gradient(100deg, #fff 8%, var(--gold) 40%, var(--rose) 70%, var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 0 40px rgba(255,79,180,.28)); }
-.big .c { font-size: .42em; letter-spacing: 0; }
-.herohead { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; position: relative; z-index: 2; }
-.today { text-align: right; }
-.today b { display: block; font: 700 26px var(--f-display); color: var(--mint); font-variant-numeric: tabular-nums; }
-.today span { font: 400 11px var(--f-mono); color: var(--muted); letter-spacing: .1em; }
-.seg { display: inline-flex; gap: 4px; padding: 3px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid var(--line); }
-.seg button { font: 600 11px var(--f-body); color: var(--muted); background: none; border: 0; padding: 6px 11px; border-radius: 999px; cursor: pointer; }
-.seg button[aria-pressed="true"] { color: var(--ink); background: rgba(138,107,255,.35); }
-.chartbox { position: relative; height: 290px; margin-top: 14px; }
-.chartbox canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
-.hint { font: 400 10.5px var(--f-mono); color: var(--muted); letter-spacing: .06em; margin-top: 8px; position: relative; z-index: 2; }
+/* Héros */
+.odo { display: inline-flex; font: 900 clamp(64px, 12vw, 190px)/1 var(--f-display); letter-spacing: -.04em; font-variant-numeric: tabular-nums; filter: drop-shadow(0 0 60px rgba(255,79,180,.35)); }
+.odo .d { display: inline-block; height: 1em; overflow: hidden; }
+.odo .d i { display: block; font-style: normal; transition: transform 2s cubic-bezier(.16,1,.3,1); }
+.odo .d span { display: block; height: 1em; background: linear-gradient(180deg, #fff 10%, var(--gold) 55%, var(--rose) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.odo .sp { width: .25em; }
+.cents { font: 800 clamp(26px, 4vw, 58px) var(--f-display); background: linear-gradient(100deg, var(--rose), var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent; margin-left: .1em; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.chip { display: inline-flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 16px; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.chip b { font: 800 20px var(--f-display); font-variant-numeric: tabular-nums; }
+.chip span { font: 400 11px var(--f-mono); color: var(--muted); letter-spacing: .08em; }
+.scrollcue { margin-top: 34px; font: 600 10px var(--f-mono); letter-spacing: .3em; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.scrollcue i { width: 22px; height: 34px; border: 1.5px solid var(--muted); border-radius: 12px; position: relative; }
+.scrollcue i::after { content: ""; position: absolute; left: 50%; top: 7px; width: 3px; height: 7px; margin-left: -1.5px; border-radius: 2px; background: var(--gold); animation: wheel 1.6s infinite; }
+@keyframes wheel { 0% { opacity: 0; transform: translateY(-3px); } 40% { opacity: 1; } 100% { opacity: 0; transform: translateY(10px); } }
 
-.glcanvas { position: relative; width: 100%; height: 330px; border-radius: 16px; overflow: hidden; cursor: grab; }
-.glcanvas:active { cursor: grabbing; }
-.glcanvas canvas { width: 100% !important; height: 100% !important; display: block; }
-.globe .glcanvas { height: 360px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; position: relative; z-index: 2; }
-.chip { font: 600 11px var(--f-body); padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid var(--line); color: var(--ink); cursor: pointer; font-variant-numeric: tabular-nums; }
-.chip em { font-style: normal; color: var(--muted); margin-left: 4px; }
-.chip:hover, .chip.on { border-color: var(--rose); box-shadow: 0 0 16px rgba(255,79,180,.35); }
+/* Panneaux de verre */
+.glass { position: relative; background: var(--glass); border: 1px solid var(--line); border-radius: 26px; padding: 22px; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: 0 30px 120px rgba(0,0,0,.45); min-width: 0; }
+.glass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(160deg, rgba(255,255,255,.08), transparent 35%); }
+.chartwrap { height: min(52vh, 460px); }
+.chartwrap canvas, .jarwrap canvas, .clockwrap canvas { width: 100%; height: 100%; display: block; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+.stat b { display: block; font: 800 clamp(18px, 2vw, 28px) var(--f-display); font-variant-numeric: tabular-nums; }
+.stat span { font: 400 10.5px var(--f-mono); color: var(--muted); letter-spacing: .12em; text-transform: uppercase; }
+.regs { display: grid; gap: 10px; margin-top: 22px; max-width: 520px; }
+.reg { display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; gap: 12px; align-items: center; cursor: pointer; padding: 6px 8px; border-radius: 12px; background: none; border: 0; color: inherit; text-align: left; font: inherit; }
+.reg:hover { background: rgba(255,255,255,.05); }
+.reg b { font: 800 14px var(--f-display); }
+.reg .bar { height: 8px; border-radius: 8px; background: rgba(255,255,255,.07); overflow: hidden; }
+.reg .bar i { display: block; height: 100%; width: 0; border-radius: 8px; background: linear-gradient(90deg, var(--violet), var(--rose), var(--gold)); transition: width 1.6s cubic-bezier(.16,1,.3,1); }
+.reg em { font: 600 12px var(--f-mono); font-style: normal; color: var(--muted); font-variant-numeric: tabular-nums; }
+.jarwrap { height: min(66vh, 600px); cursor: grab; }
+.jarwrap:active { cursor: grabbing; }
+.clockwrap { height: min(62vh, 560px); aspect-ratio: 1; max-width: 100%; margin: 0 auto; }
+.badges { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 24px; max-width: 560px; }
+.badge { display: grid; justify-items: center; gap: 8px; text-align: center; font: 600 10.5px/1.25 var(--f-body); color: var(--muted); }
+.badge div { width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; font-size: 26px; background: rgba(255,255,255,.05); border: 1.5px solid rgba(160,150,220,.3); transition: transform .8s cubic-bezier(.2,1.6,.3,1), box-shadow .8s; }
+.badge.ok { color: var(--gold); }
+.badge.ok div { border-color: var(--gold); background: rgba(255,200,97,.12); box-shadow: 0 0 30px rgba(255,200,97,.45); }
+.reveal.in .badge.ok div { animation: pop .9s cubic-bezier(.2,1.6,.3,1) both; }
+@keyframes pop { from { transform: scale(.3) rotate(-30deg); } }
+.badge small { font: 400 9.5px var(--f-mono); color: var(--muted); }
+.xp { height: 12px; border-radius: 12px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 18px; max-width: 520px; }
+.xp i { display: block; height: 100%; width: 0; border-radius: 12px; background: linear-gradient(90deg, var(--gold), var(--rose), var(--violet)); box-shadow: 0 0 22px rgba(255,79,180,.6); transition: width 2s cubic-bezier(.16,1,.3,1); }
+.cta { margin-top: 26px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.cta button { font: 700 13px var(--f-body); color: #1a0d00; background: linear-gradient(100deg, var(--gold), var(--rose)); border: 0; padding: 14px 20px; border-radius: 16px; cursor: pointer; box-shadow: 0 10px 40px rgba(255,79,180,.4); }
+.cta button.ghost { color: var(--ink); background: var(--glass); border: 1px solid var(--line); box-shadow: none; }
 
-.kpi { padding: 16px; }
-.kpi h3 { margin: 0 0 8px; font: 600 10px var(--f-mono); letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
-.kpi b { font: 800 clamp(20px, 2.2vw, 30px) var(--f-display); font-variant-numeric: tabular-nums; }
-.kpi p { margin: 6px 0 0; font: 400 11px var(--f-body); color: var(--muted); }
-.kpi .bar { height: 4px; border-radius: 4px; background: rgba(255,255,255,.08); margin-top: 10px; overflow: hidden; }
-.kpi .bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--gold), var(--rose)); }
-.lvl { display: flex; align-items: center; gap: 10px; }
-.medal { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font: 900 18px var(--f-display); color: #2a1200; background: radial-gradient(circle at 35% 30%, #fff3c4, var(--gold) 45%, #ff8a00 80%); box-shadow: 0 0 22px rgba(255,170,60,.5); flex: none; }
-
-#heat { width: 100%; height: 250px; display: block; }
-.legend { display: flex; justify-content: space-between; font: 400 10px var(--f-mono); color: var(--muted); margin-top: 8px; }
-
-.ticker { height: 280px; overflow: hidden; position: relative; mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 85%, transparent); -webkit-mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 85%, transparent); }
-.tick { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 10px 12px; margin-bottom: 8px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--line); animation: drop .7s cubic-bezier(.2,.8,.2,1) both; }
-.tick time { font: 600 12px var(--f-mono); color: var(--muted); }
-.tick span { font: 600 12.5px var(--f-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tick span em { font-style: normal; color: var(--muted); font-weight: 400; }
-.tick b { font: 800 13px var(--f-display); color: var(--gold); font-variant-numeric: tabular-nums; }
-@keyframes drop { from { opacity: 0; transform: translateY(-14px) scale(.98); } }
-
-#tip { position: fixed; z-index: 50; pointer-events: none; padding: 8px 11px; border-radius: 12px; background: rgba(10,8,24,.92); border: 1px solid rgba(255,79,180,.45); font: 600 12px var(--f-body); color: var(--ink); box-shadow: 0 10px 30px rgba(0,0,0,.5); opacity: 0; transition: opacity .15s; white-space: nowrap; }
-#tip small { display: block; font: 400 10.5px var(--f-mono); color: var(--muted); }
-
-/* Mode cinéma */
-body.cinema header .hud > :not(.cine) { opacity: .25; }
-body.cinema .panel { opacity: .18; filter: blur(4px) saturate(.5); }
-body.cinema .panel.focus { opacity: 1; filter: none; box-shadow: 0 0 0 1px rgba(255,79,180,.55), 0 40px 160px rgba(255,79,180,.35); z-index: 30; background: rgba(14,12,30,.92); }
-.bars { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 40; transition: height .8s ease; pointer-events: none; }
-.bars.top { top: 0; } .bars.bot { bottom: 0; }
-body.cinema .bars { height: 6vh; }
-.caption { position: fixed; z-index: 41; left: 50%; bottom: 1.6vh; transform: translateX(-50%); font: 600 11px var(--f-mono); letter-spacing: .3em; text-transform: uppercase; color: rgba(255,255,255,.7); opacity: 0; transition: opacity .6s; }
-body.cinema .caption { opacity: 1; }
-@media (prefers-reduced-motion: reduce) { .panel, .tick { transition: none; animation: none; } .live-dot { animation: none; } }
-
-/* ---- Mouvement ---- */
-.panel::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
-  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 50%), rgba(255,79,180,.13), rgba(79,227,255,.05) 40%, transparent 65%); opacity: var(--glow, 0); transition: opacity .35s; }
-html.intro .panel { opacity: 0; transform: perspective(1400px) translateY(80px) translateZ(-420px) rotateX(24deg); }
-html.intro header { opacity: 0; transform: translateY(-20px); }
-header { transition: opacity 1s, transform 1s cubic-bezier(.2,.8,.2,1); }
-.odo { display: inline-flex; align-items: flex-end; }
-.odo .d { display: inline-block; height: .92em; overflow: hidden; }
-.odo .d i { display: block; font-style: normal; transition: transform 1.9s cubic-bezier(.16,1,.3,1); }
-.odo .d i span { display: block; height: .92em; line-height: .92em;
-  background: linear-gradient(180deg, #fff 15%, var(--gold) 55%, var(--rose) 95%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.odo .sp { width: .28em; }
-.big { background: none; color: inherit; -webkit-background-clip: border-box; background-clip: border-box; }
-.big .c { background: linear-gradient(100deg, var(--rose), var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-#fx { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 45; pointer-events: none; }
-.toast { position: fixed; z-index: 46; top: 22px; left: 50%; transform: translate(-50%, -140%); display: flex; align-items: center; gap: 14px; padding: 14px 20px 14px 14px; border-radius: 20px;
-  background: rgba(16,12,34,.88); border: 1px solid rgba(255,200,97,.5); box-shadow: 0 20px 80px rgba(255,79,180,.45), 0 0 0 6px rgba(255,200,97,.08); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  transition: transform .8s cubic-bezier(.2,1.4,.3,1); }
+/* Fil des ventes flottant + toast */
+.feed { position: fixed; z-index: 45; right: max(16px, env(safe-area-inset-right, 0px)); transition: opacity .6s, transform .6s; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: min(300px, calc(100vw - 32px)); padding: 12px; border-radius: 18px;
+  background: rgba(10,8,24,.7); border: 1px solid var(--line); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+.feed h3 { margin: 0 0 8px; font: 600 10px var(--f-mono); letter-spacing: .2em; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+.feed h3 span::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--mint); margin-right: 6px; box-shadow: 0 0 10px var(--mint); }
+.feed ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.feed li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 9px; border-radius: 11px; background: rgba(255,255,255,.04); font: 600 11.5px var(--f-body); animation: slide .7s cubic-bezier(.16,1,.3,1) both; }
+.feed li time { font: 600 11px var(--f-mono); color: var(--muted); }
+.feed li span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.feed li b { font: 800 12px var(--f-display); color: var(--gold); }
+.feed li.new { background: rgba(255,200,97,.14); box-shadow: 0 0 0 1px rgba(255,200,97,.5); }
+@keyframes slide { from { opacity: 0; transform: translateX(-30px) scale(.96); } }
+@media (max-width: 600px) { .feed { display: none; } }
+body.nofeed .feed { opacity: 0; transform: translateY(20px); pointer-events: none; }
+.toast { position: fixed; z-index: 70; top: 88px; left: 50%; transform: translate(-50%, -220%); display: flex; align-items: center; gap: 14px; padding: 14px 22px 14px 14px; border-radius: 22px;
+  background: rgba(16,12,34,.9); border: 1px solid rgba(255,200,97,.55); box-shadow: 0 24px 90px rgba(255,79,180,.5); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); transition: transform .8s cubic-bezier(.2,1.5,.3,1); }
 .toast.on { transform: translate(-50%, 0); }
-.toast .ic { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; font-size: 22px; background: conic-gradient(from 210deg, var(--gold), var(--rose), var(--violet), var(--gold)); }
-.toast b { display: block; font: 800 18px var(--f-display); color: var(--gold); font-variant-numeric: tabular-nums; }
-.toast span { font: 400 11.5px var(--f-mono); color: var(--muted); letter-spacing: .06em; }
-.status { color: var(--muted); }
-.status.live { color: var(--mint); }
-.flash { animation: flash 1.4s ease; }
-@keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(255,200,97,.0); } 20% { box-shadow: 0 0 0 2px rgba(255,200,97,.8), 0 0 80px rgba(255,200,97,.45); } 100% { box-shadow: 0 0 0 0 rgba(255,200,97,0); } }
-@media (prefers-reduced-motion: reduce) { html.intro .panel, html.intro header { opacity: 1; transform: none; } .odo .d i { transition: none; } }
+.toast .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px; background: conic-gradient(from 210deg, var(--gold), var(--rose), var(--violet), var(--gold)); }
+.toast b { display: block; font: 900 20px var(--f-display); color: var(--gold); font-variant-numeric: tabular-nums; }
+.toast span { font: 400 11.5px var(--f-mono); color: var(--muted); letter-spacing: .05em; }
+#tip { position: fixed; z-index: 80; pointer-events: none; padding: 8px 11px; border-radius: 12px; background: rgba(10,8,24,.94); border: 1px solid rgba(255,79,180,.5); font: 600 12px var(--f-body); opacity: 0; transition: opacity .15s; white-space: nowrap; }
+#tip small { display: block; font: 400 10.5px var(--f-mono); color: var(--muted); }
+body.film .hud, body.film .feed { opacity: .0; transition: opacity .8s; }
+body.film::after { content: ""; position: fixed; inset: 0; z-index: 55; pointer-events: none; box-shadow: inset 0 7vh 0 #000, inset 0 -7vh 0 #000; }
+@media (prefers-reduced-motion: reduce) { .reveal > *, .odo .d i, .reg .bar i, .xp i { transition: none !important; } .feed li, .scrollcue i::after { animation: none; } }
 </style>
 
-
-<script>document.documentElement.classList.add("intro")</script>
-<canvas id="sky" aria-hidden="true"></canvas>
+<canvas id="gl" aria-hidden="true"></canvas>
+<div class="vignette"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
-<div class="toast" id="toast" role="status" aria-live="polite"><div class="ic">💸</div><div><b id="toastAmt">+0 $</b><span id="toastTxt"></span></div></div>
-<div class="bars top"></div><div class="bars bot"></div>
-<div class="caption" id="caption">Eldorado · Command Center</div>
 <div id="tip"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"><div class="ic">💸</div><div><b id="toastAmt">+0 $</b><span id="toastTxt"></span></div></div>
 
-<div class="wrap">
-  <header>
-    <div class="brand"><div class="logo">E</div><div><h1>ELDORADO</h1><p>Command center · <span id="majTxt"></span></p></div></div>
-    <div class="hud">
-      <span class="pill"><span class="live-dot"></span><span id="clock">--:--</span> · <span class="status" id="status">données figées</span></span>
-      <button class="pill" id="replay">↻ Rejouer la dernière vente</button>
-      <button class="pill" id="discret" aria-pressed="true">Mode discret</button>
-      <button class="pill cine" id="cine">▶ Mode cinéma</button>
-    </div>
-  </header>
-
-  <div class="grid">
-    <section class="panel hero" data-cap="Bénéfice net">
-      <div class="herohead">
-        <div>
-          <div class="ph" style="margin:0 0 6px"><h2>Bénéfice net depuis le 21 sept.</h2></div>
-          <div class="big"><span id="total" class="odo"></span><span class="c">,<span id="cents">00</span> $</span></div>
-        </div>
-        <div class="today"><span>AUJOURD'HUI</span><b id="today">+0 $</b><span id="todayN"></span></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;flex-wrap:wrap;position:relative;z-index:2">
-        <div class="seg" role="group" aria-label="Vue du graphique">
-          <button id="vCum" aria-pressed="true">Bénéfice cumulé</button>
-          <button id="vDay" aria-pressed="false">Ventes par jour</button>
-        </div>
-        <small style="font:400 11px var(--f-mono);color:var(--muted)" id="rangeTxt"></small>
-      </div>
-      <div class="chartbox"><canvas id="chart" aria-label="Graphique du bénéfice"></canvas></div>
-      <div class="hint">Survole pour le détail · glisse pour zoomer sur une période · double-clic pour revenir</div>
-    </section>
-
-    <section class="panel globe" data-cap="Le monde entier">
-      <div class="ph"><h2>Clients par serveur</h2><small id="regTotal"></small></div>
-      <div class="glcanvas" id="globeBox"></div>
-      <div class="chips" id="regChips"></div>
-    </section>
-
-    <div class="kpis" id="kpis"></div>
-
-    <section class="panel city" data-cap="Chaque jour, une tour">
-      <div class="ph"><h2>Calendrier 3D des ventes</h2><small>tourne · zoome · survole une tour</small></div>
-      <div class="glcanvas" id="cityBox"></div>
-    </section>
-
-    <section class="panel heat" data-cap="Les heures chaudes">
-      <div class="ph"><h2>Heures de vente</h2><small id="peakTxt"></small></div>
-      <canvas id="heat" aria-label="Ventes par jour de la semaine et par heure"></canvas>
-      <div class="legend"><span>0 h</span><span>6 h</span><span>12 h</span><span>18 h</span><span>23 h</span></div>
-    </section>
-
-    <section class="panel feed" data-cap="En direct">
-      <div class="ph"><h2>Dernières ventes</h2><small id="feedN"></small></div>
-      <div class="ticker" id="ticker"></div>
-    </section>
+<div class="hud">
+  <div class="brand"><div class="logo">E</div><div><b>ELDORADO</b><small id="maj"></small></div></div>
+  <div class="player">
+    <div class="btns"><button id="prev" aria-label="Chapitre précédent">◀</button><button id="auto" aria-label="Lecture automatique">▶</button><button id="next" aria-label="Chapitre suivant">▶▶</button></div>
+    <div class="track"><div class="t" id="trackT">01 · <em>Le total</em></div><div class="segs" id="segs"></div></div>
+    <div class="tools"><button id="replay" title="Rejouer les dernières ventes">↻</button></div>
   </div>
+  <div class="tools"><span class="clock"><span id="clock">--:--</span> · <span id="status">figé</span></span><button id="discret" aria-pressed="true" title="Cache les noms de comptes">Discret</button></div>
 </div>
 
+<main>
+  <section class="ch" data-t="Le total">
+    <div class="stick"><div class="inner"><div class="reveal">
+      <div class="kicker">Chapitre 01 · Bénéfice net</div>
+      <div><span class="odo" id="odo"></span><span class="cents" id="cents">,00 $</span></div>
+      <p class="lead">Depuis le <b>21 septembre</b>. Toutes tes ventes Eldorado, moins chaque compte acheté.</p>
+      <div class="chips">
+        <div class="chip"><svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="5"/><circle id="ringToday" cx="22" cy="22" r="18" fill="none" stroke="url(#gr)" stroke-width="5" stroke-linecap="round" stroke-dasharray="113" stroke-dashoffset="113" transform="rotate(-90 22 22)" style="transition:stroke-dashoffset 2s cubic-bezier(.16,1,.3,1)"/><defs><linearGradient id="gr"><stop offset="0" stop-color="#ffc861"/><stop offset="1" stop-color="#ff4fb4"/></linearGradient></defs></svg><div><b id="today">+0 $</b><span id="todayN">aujourd'hui</span></div></div>
+        <div class="chip"><div><b id="week">0 $</b><span>cette semaine</span></div></div>
+        <div class="chip"><div><b id="streak">0 j</b><span>série ≥ 200 $ 🔥</span></div></div>
+      </div>
+      <div class="scrollcue"><i></i>DESCENDS POUR LE VOYAGE</div>
+    </div><div></div></div></div>
+  </section>
+
+  <section class="ch" data-t="La trajectoire">
+    <div class="stick"><div class="inner one"><div class="reveal">
+      <div class="kicker">Chapitre 02 · La trajectoire</div>
+      <h2>De <span class="g">0</span> à <span class="g" id="trajTo">7 000 $</span><br>en <span id="trajDays">34</span> jours.</h2>
+      <div class="glass"><div class="chartwrap"><canvas id="chart" aria-label="Bénéfice cumulé jour par jour"></canvas></div>
+        <div class="stats"><div class="stat"><b id="sVentes">0 $</b><span>ventes nettes</span></div><div class="stat"><b id="sAchats">0 $</b><span>stock acheté</span></div><div class="stat"><b id="sMarge">0 %</b><span>marge</span></div></div></div>
+    </div></div></div>
+  </section>
+
+  <section class="ch" data-t="Le monde">
+    <div class="stick"><div class="inner"><div class="reveal">
+      <div class="kicker">Chapitre 03 · Le monde</div>
+      <h2><span class="g" id="regN">6</span> serveurs,<br>une seule boutique.</h2>
+      <p class="lead">Chaque faisceau part de Suisse. Clique sur un serveur pour y voler.</p>
+      <div class="regs" id="regs"></div>
+    </div><div></div></div></div>
+  </section>
+
+  <section class="ch" data-t="La ville">
+    <div class="stick"><div class="inner"><div class="reveal">
+      <div class="kicker">Chapitre 04 · Le calendrier</div>
+      <h2>Chaque jour<br>bâtit <span class="g">une tour</span>.</h2>
+      <p class="lead">Une semaine par rangée. Plus la tour est haute, plus la journée a rapporté. Survole-les.</p>
+      <div class="chips"><div class="chip"><div><b id="best">0 $</b><span id="bestD">meilleure journée</span></div></div><div class="chip"><div><b id="avg">0 $</b><span>par jour en moyenne</span></div></div></div>
+    </div><div></div></div></div>
+  </section>
+
+  <section class="ch" data-t="Le coffre">
+    <div class="stick"><div class="inner"><div class="reveal">
+      <div class="kicker">Chapitre 05 · Aujourd'hui</div>
+      <h2><span class="g" id="coinN">0</span> pièces<br>dans le coffre.</h2>
+      <p class="lead">Une pièce par compte vendu aujourd'hui. Les nouvelles ventes tombent dedans une par une. Attrape-les, secoue le coffre.</p>
+      <div class="chips"><div class="chip"><div><b id="today2">0 $</b><span>net aujourd'hui</span></div></div><div class="chip"><div><b id="obj">0 %</b><span>de l'objectif 200 $</span></div></div></div>
+    </div><div class="glass jarwrap"><canvas id="jar" aria-label="Coffre de pièces"></canvas></div></div></div>
+  </section>
+
+  <section class="ch short" data-t="Les heures">
+    <div class="stick"><div class="inner"><div class="reveal">
+      <div class="kicker">Chapitre 06 · Les heures</div>
+      <h2>Tes clients<br>achètent à <span class="g" id="peakH">22 h</span>.</h2>
+      <p class="lead">Chaque anneau est un jour de la semaine, chaque rayon une heure. Plus c'est chaud, plus ça vend.</p>
+    </div><div class="clockwrap"><canvas id="clockc" aria-label="Ventes par jour et par heure"></canvas></div></div></div>
+  </section>
+
+  <section class="ch short" data-t="Le niveau">
+    <div class="stick"><div class="inner"><div class="reveal">
+      <div class="kicker">Chapitre 07 · Niveau</div>
+      <h2>Niveau <span class="g" id="lvl">8</span><br><span id="lvlName">BOSS</span>.</h2>
+      <p class="lead" id="lvlTxt"></p>
+      <div class="xp"><i id="xp"></i></div>
+      <div class="badges" id="badges"></div>
+    </div><div></div></div></div>
+  </section>
+
+  <section class="ch short" data-t="La suite">
+    <div class="stick"><div class="inner one" style="text-align:center"><div class="reveal" style="justify-items:center;display:grid">
+      <div class="kicker">Et ensuite</div>
+      <h2>Prochain cap<br><span class="g" id="next">8 000 $</span></h2>
+      <p class="lead" id="outro" style="margin:0 auto"></p>
+      <div class="cta"><button id="replay2">↻ Rejouer les dernières ventes</button><button class="ghost" id="top">Revenir au début</button></div>
+    </div></div></div>
+  </section>
+</main>
+
+<aside class="feed"><h3><span>EN DIRECT</span><em id="feedN" style="font-style:normal"></em></h3><ul id="feed"></ul></aside>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
 <script>
-let D = {"total": 7233.61, "ventesTotal": 10229.93, "comptesTotal": 1714, "mois": 8747.32, "semaine": 1884.5, "jour": 319.75, "comptes": 66, "streak": 11, "stock": 355, "series": [["2026-09-21", 203.94, 238.65, -34.71, 35], ["2026-09-22", 225.83, 100.5, 90.62, 47], ["2026-09-23", 189.01, 0, 279.63, 37], ["2026-09-24", 145.34, 0, 424.97, 30], ["2026-09-25", 81.76, 0, 506.73, 18], ["2026-09-26", 136.13, 0, 642.86, 22], ["2026-09-27", 74.61, 52.0, 665.47, 17], ["2026-09-28", 103.85, 0, 769.32, 23], ["2026-09-29", 147.93, 262.0, 655.25, 35], ["2026-09-30", 174.21, 0, 829.46, 40], ["2026-10-01", 406.43, 237.26, 998.63, 56], ["2026-10-02", 614.16, 0, 1612.79, 77], ["2026-10-03", 189.27, 158.0, 1644.06, 34], ["2026-10-04", 307.6, 235.28, 1716.38, 49], ["2026-10-05", 411.7, 0, 2128.08, 52], ["2026-10-06", 400.64, 0, 2528.72, 63], ["2026-10-07", 469.92, 103.0, 2895.64, 66], ["2026-10-08", 499.02, 375.72, 3018.94, 57], ["2026-10-09", 233.35, 0, 3252.29, 39], ["2026-10-10", 737.35, 76.5, 3913.14, 95], ["2026-10-11", 382.3, 270.72, 4024.72, 57], ["2026-10-12", 357.28, 85.0, 4297.0, 54], ["2026-10-13", 180.19, 0, 4477.19, 39], ["2026-10-14", 247.6, 174.0, 4550.79, 54], ["2026-10-15", 291.41, 0, 4842.2, 55], ["2026-10-16", 353.25, 109.5, 5085.95, 75], ["2026-10-17", 400.88, 93.0, 5393.83, 71], ["2026-10-18", 380.47, 196.98, 5577.32, 70], ["2026-10-19", 263.76, 0, 5841.08, 56], ["2026-10-20", 438.66, 0, 6279.74, 74], ["2026-10-21", 278.68, 0, 6558.42, 46], ["2026-10-22", 208.74, 231.6, 6535.56, 32], ["2026-10-23", 374.91, 0, 6910.47, 73], ["2026-10-24", 319.75, 0, 7233.61, 66]], "heat": [[19, 4, 2, 8, 3, 6, 5, 5, 2, 2, 2, 9, 9, 5, 6, 15, 18, 12, 12, 13, 18, 13, 11, 21], [21, 10, 7, 15, 5, 12, 4, 4, 1, 6, 2, 6, 6, 8, 8, 6, 11, 14, 20, 20, 17, 11, 22, 22], [6, 8, 10, 10, 4, 6, 2, 5, 7, 4, 3, 6, 15, 11, 8, 4, 10, 17, 29, 14, 22, 20, 10, 12], [9, 9, 11, 9, 5, 7, 6, 3, 3, 4, 3, 12, 12, 10, 8, 14, 7, 10, 11, 15, 11, 11, 23, 17], [21, 16, 7, 7, 8, 6, 6, 3, 4, 1, 6, 5, 10, 13, 16, 12, 15, 10, 20, 16, 17, 25, 22, 16], [24, 18, 13, 4, 17, 4, 8, 7, 3, 5, 2, 5, 10, 13, 17, 28, 10, 11, 7, 12, 14, 16, 21, 13], [13, 15, 10, 3, 3, 4, 3, 5, 4, 0, 3, 8, 7, 11, 8, 12, 7, 14, 9, 11, 10, 8, 10, 15]], "reg": {"EUW": 679, "NA": 354, "EUNE": 283, "LAS": 63, "BR": 61, "LAN": 57}, "log": [{"t": "2026-10-24T15:29:18", "p": 4.99, "r": "EUW RR", "c": "LoLPrime"}, {"t": "2026-10-24T15:41:28", "p": 11.99, "r": "EUNE Gold", "c": "Orbyn"}, {"t": "2026-10-24T15:41:34", "p": 4.99, "r": "EUW RR", "c": "LoLPrime"}, {"t": "2026-10-24T15:42:38", "p": 4.99, "r": "EUNE RR", "c": "Orbyn"}, {"t": "2026-10-24T15:46:49", "p": 4.99, "r": "EUNE RR", "c": "Orbyn"}, {"t": "2026-10-24T15:50:10", "p": 11.99, "r": "EUNE Gold", "c": "Orbyn"}, {"t": "2026-10-24T16:23:54", "p": 3.99, "r": "EUNE", "c": "Orbyn"}, {"t": "2026-10-24T16:24:06", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T17:33:31", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T17:46:56", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T17:48:01", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T17:50:58", "p": 3.99, "r": "LoL", "c": "Orbyn"}, {"t": "2026-10-24T17:52:01", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T18:10:08", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}], "maj": "2026-10-24T18:10"};
+let D = {"total": 7344.75, "ventesTotal": 10341.07, "comptesTotal": 1733, "mois": 8858.46, "semaine": 1995.64, "jour": 430.89, "comptes": 85, "streak": 11, "stock": 336, "bestDay": {"v": 737.35, "d": "10 oct."}, "series": [["2026-09-21", 203.94, 238.65, -34.71, 35], ["2026-09-22", 225.83, 100.5, 90.62, 47], ["2026-09-23", 189.01, 0, 279.63, 37], ["2026-09-24", 145.34, 0, 424.97, 30], ["2026-09-25", 81.76, 0, 506.73, 18], ["2026-09-26", 136.13, 0, 642.86, 22], ["2026-09-27", 74.61, 52, 665.47, 17], ["2026-09-28", 103.85, 0, 769.32, 23], ["2026-09-29", 147.93, 262, 655.25, 35], ["2026-09-30", 174.21, 0, 829.46, 40], ["2026-10-01", 406.43, 237.26, 998.63, 56], ["2026-10-02", 614.16, 0, 1612.79, 77], ["2026-10-03", 189.27, 158, 1644.06, 34], ["2026-10-04", 307.6, 235.28, 1716.38, 49], ["2026-10-05", 411.7, 0, 2128.08, 52], ["2026-10-06", 400.64, 0, 2528.72, 63], ["2026-10-07", 469.92, 103, 2895.64, 66], ["2026-10-08", 499.02, 375.72, 3018.94, 57], ["2026-10-09", 233.35, 0, 3252.29, 39], ["2026-10-10", 737.35, 76.5, 3913.14, 95], ["2026-10-11", 382.3, 270.72, 4024.72, 57], ["2026-10-12", 357.28, 85, 4297, 54], ["2026-10-13", 180.19, 0, 4477.19, 39], ["2026-10-14", 247.6, 174, 4550.79, 54], ["2026-10-15", 291.41, 0, 4842.2, 55], ["2026-10-16", 353.25, 109.5, 5085.95, 75], ["2026-10-17", 400.88, 93, 5393.83, 71], ["2026-10-18", 380.47, 196.98, 5577.32, 70], ["2026-10-19", 263.76, 0, 5841.08, 56], ["2026-10-20", 438.66, 0, 6279.74, 74], ["2026-10-21", 278.68, 0, 6558.42, 46], ["2026-10-22", 208.74, 231.6, 6535.56, 32], ["2026-10-23", 374.91, 0, 6910.47, 73], ["2026-10-24", 430.89, 0, 7344.75, 85]], "heat": [[19, 4, 2, 8, 3, 6, 5, 5, 2, 2, 2, 9, 9, 5, 6, 15, 18, 12, 12, 13, 18, 13, 11, 21], [21, 10, 7, 15, 5, 12, 4, 4, 1, 6, 2, 6, 6, 8, 8, 6, 11, 14, 20, 20, 17, 11, 22, 22], [6, 8, 10, 10, 4, 6, 2, 5, 7, 4, 3, 6, 15, 11, 8, 4, 10, 17, 29, 14, 22, 20, 10, 12], [9, 9, 11, 9, 5, 7, 6, 3, 3, 4, 3, 12, 12, 10, 8, 14, 7, 10, 11, 15, 11, 11, 23, 17], [21, 16, 7, 7, 8, 6, 6, 3, 4, 1, 6, 5, 10, 13, 16, 12, 15, 10, 20, 16, 17, 25, 22, 16], [24, 18, 13, 4, 17, 4, 8, 7, 3, 5, 2, 5, 10, 13, 17, 28, 10, 11, 7, 12, 14, 16, 21, 13], [13, 15, 10, 3, 3, 4, 3, 5, 4, 0, 3, 8, 7, 11, 8, 12, 7, 14, 9, 11, 10, 8, 10, 15]], "reg": {"EUW": 679, "NA": 354, "EUNE": 283, "LAS": 63, "BR": 61, "LAN": 57}, "objectif": 200, "log": [{"t": "2026-10-23T19:08:21", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T19:10:09", "p": 11.99, "r": "EUW Silver", "c": "Orbyn"}, {"t": "2026-10-23T19:11:07", "p": 3.99, "r": "EUNE", "c": "Orbyn"}, {"t": "2026-10-23T19:15:14", "p": 3.99, "r": "EUNE", "c": "Orbyn"}, {"t": "2026-10-23T19:22:22", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T19:40:02", "p": 4.99, "r": "EUNE RR", "c": "LoLPrime"}, {"t": "2026-10-23T19:44:21", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T19:45:40", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T19:53:23", "p": 4.99, "r": "EUW RR", "c": "LoLPrime"}, {"t": "2026-10-23T20:02:41", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T20:03:24", "p": 4.49, "r": "EUW", "c": "Orbyn"}, {"t": "2026-10-23T20:05:32", "p": 9.99, "r": "EUNE Platinum", "c": "Orbyn"}, {"t": "2026-10-23T20:09:04", "p": 4.99, "r": "EUNE RR", "c": "LoLPrime"}, {"t": "2026-10-23T20:13:41", "p": 4.99, "r": "BR RR", "c": "Orbyn"}, {"t": "2026-10-23T20:23:35", "p": 4.49, "r": "EUW", "c": "Orbyn"}, {"t": "2026-10-23T20:28:49", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T20:31:17", "p": 3.99, "r": "NA", "c": "Orbyn"}, {"t": "2026-10-23T20:55:27", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T21:01:03", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T21:08:40", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T21:12:27", "p": 16.99, "r": "EUNE Platinum", "c": "Orbyn"}, {"t": "2026-10-23T21:17:21", "p": 3.99, "r": "EUNE", "c": "Orbyn"}, {"t": "2026-10-23T21:17:50", "p": 3.99, "r": "EUNE", "c": "Orbyn"}, {"t": "2026-10-23T21:23:44", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T21:23:49", "p": 19.99, "r": "EUW Bronze", "c": "Orbyn"}, {"t": "2026-10-23T21:25:51", "p": 4.99, "r": "NA RR", "c": "Orbyn"}, {"t": "2026-10-23T21:42:52", "p": 9.99, "r": "EUNE Silver", "c": "Orbyn"}, {"t": "2026-10-23T22:27:59", "p": 4.99, "r": "EUW RR", "c": "LoLPrime"}, {"t": "2026-10-23T22:33:34", "p": 4.99, "r": "NA RR", "c": "LoLPrime"}, {"t": "2026-10-23T22:48:13", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-23T23:28:41", "p": 4.99, "r": "NA RR", "c": "Orbyn"}, {"t": "2026-10-23T23:49:49", "p": 4.49, "r": "LAS +50", "c": "Orbyn"}, {"t": "2026-10-24T00:11:35", "p": 4.49, "r": "EUW", "c": "Orbyn"}, {"t": "2026-10-24T00:17:37", "p": 9.99, "r": "BR Gold", "c": "Orbyn"}, {"t": "2026-10-24T00:19:12", "p": 4.49, "r": "LAN +50", "c": "Orbyn"}, {"t": "2026-10-24T00:29:04", "p": 3.99, "r": "EUNE", "c": "Orbyn"}, {"t": "2026-10-24T00:34:13", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T00:34:50", "p": 4.99, "r": "EUNE RR", "c": "LoLPrime"}, {"t": "2026-10-24T00:34:51", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T01:02:19", "p": 4.99, "r": "EUNE RR", "c": "LoLPrime"}, {"t": "2026-10-24T01:02:29", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T01:05:19", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T01:07:29", "p": 4.49, "r": "EUW", "c": "Orbyn"}, {"t": "2026-10-24T01:09:21", "p": 3.99, "r": "NA", "c": "Orbyn"}, {"t": "2026-10-24T01:19:10", "p": 4.99, "r": "EUNE RR", "c": "LoLPrime"}, {"t": "2026-10-24T01:42:34", "p": 4.99, "r": "NA RR", "c": "Orbyn"}, {"t": "2026-10-24T01:43:25", "p": 11.99, "r": "NA Unranked", "c": "Orbyn"}, {"t": "2026-10-24T01:48:06", "p": 4.49, "r": "LAN +50", "c": "Orbyn"}, {"t": "2026-10-24T02:02:57", "p": 4.99, "r": "EUNE RR", "c": "LoLPrime"}, {"t": "2026-10-24T02:20:00", "p": 9.99, "r": "NA Unranked", "c": "Orbyn"}, {"t": "2026-10-24T02:29:48", "p": 12.99, "r": "EUW Gold", "c": "Orbyn"}, {"t": "2026-10-24T02:38:02", "p": 4.49, "r": "LAN +50", "c": "Orbyn"}, {"t": "2026-10-24T02:40:24", "p": 4.49, "r": "LAS +50", "c": "Orbyn"}, {"t": "2026-10-24T03:40:59", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T04:10:26", "p": 3.99, "r": "EUNE", "c": "Orbyn"}, {"t": "2026-10-24T04:15:15", "p": 4.49, "r": "EUW", "c": "Orbyn"}, {"t": "2026-10-24T04:21:19", "p": 4.99, "r": "NA RR", "c": "Orbyn"}, {"t": "2026-10-24T05:37:28", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T06:19:25", "p": 4.99, "r": "NA RR", "c": "Orbyn"}, {"t": "2026-10-24T07:08:53", "p": 11.99, "r": "BR Gold", "c": "Orbyn"}, {"t": "2026-10-24T07:50:30", "p": 3.99, "r": "NA", "c": "Orbyn"}, {"t": "2026-10-24T08:08:45", "p": 3.99, "r": "EUNE", "c": "Orbyn"}, {"t": "2026-10-24T08:51:58", "p": 10.99, "r": "EUW Gold", "c": "Orbyn"}, {"t": "2026-10-24T11:14:17", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T11:24:51", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T12:38:11", "p": 4.99, "r": "EUW RR", "c": "LoLPrime"}, {"t": "2026-10-24T12:43:02", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T12:49:17", "p": 4.99, "r": "EUNE RR", "c": "Orbyn"}, {"t": "2026-10-24T13:40:11", "p": 4.99, "r": "EUNE RR", "c": "Orbyn"}, {"t": "2026-10-24T13:43:53", "p": 4.99, "r": "NA RR", "c": "LoLPrime"}, {"t": "2026-10-24T13:50:36", "p": 4.99, "r": "EUNE RR", "c": "Orbyn"}, {"t": "2026-10-24T13:56:34", "p": 4.99, "r": "EUNE RR", "c": "LoLPrime"}, {"t": "2026-10-24T14:02:47", "p": 4.99, "r": "EUW RR", "c": "LoLPrime"}, {"t": "2026-10-24T14:05:17", "p": 4.99, "r": "NA RR", "c": "LoLPrime"}, {"t": "2026-10-24T14:33:03", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T14:41:40", "p": 4.49, "r": "EUW", "c": "Orbyn"}, {"t": "2026-10-24T14:42:12", "p": 4.99, "r": "EUNE RR", "c": "LoLPrime"}, {"t": "2026-10-24T14:42:25", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T14:48:17", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T15:01:24", "p": 10.99, "r": "EUW Gold", "c": "Orbyn"}, {"t": "2026-10-24T15:18:39", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T15:19:16", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T15:22:30", "p": 4.99, "r": "EUW RR", "c": "LoLPrime"}, {"t": "2026-10-24T15:23:57", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T15:29:18", "p": 4.99, "r": "EUW RR", "c": "LoLPrime"}, {"t": "2026-10-24T15:41:28", "p": 11.99, "r": "EUNE Gold", "c": "Orbyn"}, {"t": "2026-10-24T15:41:34", "p": 4.99, "r": "EUW RR", "c": "LoLPrime"}, {"t": "2026-10-24T15:42:38", "p": 4.99, "r": "EUNE RR", "c": "Orbyn"}, {"t": "2026-10-24T15:46:49", "p": 4.99, "r": "EUNE RR", "c": "Orbyn"}, {"t": "2026-10-24T15:50:10", "p": 11.99, "r": "EUNE Gold", "c": "Orbyn"}, {"t": "2026-10-24T16:23:54", "p": 3.99, "r": "EUNE", "c": "Orbyn"}, {"t": "2026-10-24T16:24:06", "p": 4.99, "r": "EUW RR", "c": "Orbyn"}, {"t": "2026-10-24T17:33:31", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T17:46:56", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T17:48:01", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T17:50:58", "p": 3.99, "r": "LoL", "c": "Orbyn"}, {"t": "2026-10-24T17:52:01", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T18:10:08", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T18:47:04", "p": 9.99, "r": "LoL premium", "c": "Orbyn"}, {"t": "2026-10-24T18:48:03", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T18:59:49", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T19:01:23", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T19:11:22", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T19:20:05", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T19:36:43", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T19:38:29", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T20:13:29", "p": 4.49, "r": "LoL", "c": "Orbyn"}, {"t": "2026-10-24T20:13:54", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T20:15:58", "p": 4.49, "r": "LoL", "c": "Orbyn"}, {"t": "2026-10-24T20:48:47", "p": 9.99, "r": "LoL premium", "c": "Orbyn"}, {"t": "2026-10-24T21:17:00", "p": 12.99, "r": "LoL premium", "c": "Orbyn"}, {"t": "2026-10-24T21:18:30", "p": 4.49, "r": "LoL", "c": "Orbyn"}, {"t": "2026-10-24T21:19:01", "p": 24.99, "r": "LoL premium", "c": "Orbyn"}, {"t": "2026-10-24T21:25:16", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T21:25:44", "p": 4.49, "r": "LoL", "c": "Orbyn"}, {"t": "2026-10-24T21:28:09", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}, {"t": "2026-10-24T21:34:57", "p": 4.99, "r": "LoL RR", "c": "Orbyn"}], "maj": "2026-10-24T21:35", "date": "2026-10-24"};
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+const net = (p) => p - Math.ceil(p * 15 - 1e-9) / 100;
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const tip = $("tip");
-const showTip = (x, y, html) => { tip.innerHTML = html; tip.style.opacity = 1; const w = tip.offsetWidth; tip.style.left = Math.min(innerWidth - w - 10, x + 14) + "px"; tip.style.top = (y + 14) + "px"; };
-const hideTip = () => { tip.style.opacity = 0; };
-const MOIS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
-const JOURS = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+const MOIS = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."], JOURS = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
 const dayLabel = (iso) => parseInt(iso.slice(8)) + " " + MOIS[parseInt(iso.slice(5, 7)) - 1];
-let discret = true, warp = reduce ? 0 : 1.2;
+const tip = $("tip");
+const showTip = (x, y, h) => { tip.innerHTML = h; tip.style.opacity = 1; tip.style.left = Math.min(innerWidth - tip.offsetWidth - 10, x + 14) + "px"; tip.style.top = y + 14 + "px"; };
+const hideTip = () => (tip.style.opacity = 0);
+let discret = true, shown = 0; // shown = bénéfice affiché par le compteur
 
-// ================= Ciel : champ d'étoiles en profondeur (effet « warp ») =================
-(function sky() {
-  const c = $("sky"), g = c.getContext("2d"); let W, H, stars = [];
-  const N = 520;
-  const spawn = (s, far) => { s.x = (Math.random() - .5) * 2; s.y = (Math.random() - .5) * 2; s.z = far ? Math.random() : 1; s.h = Math.random() < .2 ? 330 : Math.random() < .5 ? 190 : 260; return s; };
-  const init = () => { W = c.width = innerWidth * devicePixelRatio; H = c.height = innerHeight * devicePixelRatio; };
-  init(); addEventListener("resize", init);
-  for (let i = 0; i < N; i++) stars.push(spawn({}, true));
-  let last = 0, mx = 0, my = 0;
-  addEventListener("mousemove", (e) => { mx = (e.clientX / innerWidth - .5) * 2; my = (e.clientY / innerHeight - .5) * 2; });
-  (function frame(t) {
-    const dt = Math.min(50, t - last) / 16.7; last = t;
-    warp *= Math.pow(.985, dt);
-    const speed = (reduce ? 0 : .0018) + warp * .03;
-    g.fillStyle = `rgba(5,5,12,${.35 + Math.min(.5, warp * .4) * -0.5 + .3})`; g.fillRect(0, 0, W, H);
-    const blobs = [["138,107,255", .18, .12, .55], ["255,79,180", .82, .25, .45], ["79,227,255", .55, .95, .5], ["255,200,97", .1, .9, .3]];
-    blobs.forEach(([rgb, x, y, a], i) => { const px = (x + Math.sin(t / 7000 + i) * .06 - mx * .02) * W, py = (y + Math.cos(t / 9000 + i) * .06 - my * .02) * H, r = Math.max(W, H) * .5;
-      const gr = g.createRadialGradient(px, py, 0, px, py, r); gr.addColorStop(0, `rgba(${rgb},${a * .16})`); gr.addColorStop(1, `rgba(${rgb},0)`); g.fillStyle = gr; g.fillRect(0, 0, W, H); });
-    const cx = W / 2 - mx * W * .03, cy = H / 2 - my * H * .03, f = Math.min(W, H) * .6;
-    stars.forEach((s) => {
-      const pz = s.z; s.z -= speed * dt; if (s.z <= .02) spawn(s, false);
-      const sx = cx + (s.x / s.z) * f, sy = cy + (s.y / s.z) * f, px = cx + (s.x / pz) * f, py = cy + (s.y / pz) * f;
-      if (sx < 0 || sx > W || sy < 0 || sy > H) { spawn(s, false); return; }
-      const a = Math.min(1, (1 - s.z) * 1.4), w = Math.max(.6, (1 - s.z) * 2.6) * devicePixelRatio;
-      g.strokeStyle = `hsla(${s.h},100%,85%,${a})`; g.lineWidth = w; g.beginPath(); g.moveTo(px, py); g.lineTo(sx + .1, sy + .1); g.stroke();
-    });
-    requestAnimationFrame(frame);
-  })(0);
-})();
-
-// ================= Odomètre =================
-function setOdo(el, str) {
-  const chars = [...str];
+// ---------------- Odomètre ----------------
+function setOdo(v) {
+  const el = $("odo"), str = fmt(Math.floor(v)), chars = [...str];
   if (el.children.length !== chars.length) {
-    el.innerHTML = chars.map((ch) => /\d/.test(ch) ? `<span class="d"><i>${[0,1,2,3,4,5,6,7,8,9,0,1,2,3,4,5,6,7,8,9].map((n) => `<span>${n}</span>`).join("")}</i></span>` : `<span class="sp"></span>`).join("");
-    void el.offsetWidth;
+    el.innerHTML = chars.map((c) => /\d/.test(c) ? `<span class="d"><i>${Array.from({ length: 20 }, (_, n) => `<span>${n % 10}</span>`).join("")}</i></span>` : `<span class="sp"></span>`).join(""); void el.offsetWidth;
   }
-  chars.forEach((ch, k) => { const i = el.children[k].firstElementChild; if (!i) return;
-    const n = +ch, spins = reduce ? 0 : 10; i.style.transform = `translateY(${-(n + spins) * .92}em)`; });
+  chars.forEach((c, k) => { const i = el.children[k].firstElementChild; if (i) i.style.transform = `translateY(${-(+c + (reduce ? 0 : 10))}em)`; });
+  $("cents").textContent = "," + String(Math.round((v % 1) * 100)).padStart(2, "0") + " $";
+  shown = v;
 }
-function resetOdo(el) { [...el.querySelectorAll("i")].forEach((i) => { i.style.transition = "none"; i.style.transform = "translateY(0)"; void i.offsetWidth; i.style.transition = ""; }); }
-function heroCount(fromZero) {
-  const el = $("total");
-  if (fromZero) resetOdo(el);
-  setOdo(el, fmt(Math.floor(D.total)));
-  $("cents").textContent = String(Math.round((D.total % 1) * 100)).padStart(2, "0");
-}
+function zeroOdo() { [...$("odo").querySelectorAll("i")].forEach((i) => { i.style.transition = "none"; i.style.transform = "translateY(0)"; void i.offsetWidth; i.style.transition = ""; }); }
 
-// ================= En-tête =================
-const tick = () => { $("clock").textContent = new Date().toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit", second: "2-digit" }); };
-tick(); setInterval(tick, 1000);
-function renderHead() {
-  $("majTxt").textContent = "données au " + dayLabel(D.maj.slice(0, 10)) + " " + D.maj.slice(11, 16);
-  $("today").textContent = "+" + D.jour.toFixed(2).replace(".", ",") + " $";
-  $("todayN").textContent = D.comptes + " comptes · " + Math.round(100 * D.jour / 200) + " % de l'objectif";
+// ---------------- Remplissage ----------------
+const LV = [[1,"ROOKIE"],[3,"HUSTLER"],[6,"BOSS"],[10,"MAGNAT"],[20,"LÉGENDE"]];
+function fill() {
+  $("maj").textContent = "DONNÉES · " + dayLabel(D.maj.slice(0, 10)).toUpperCase() + " " + D.maj.slice(11, 16);
+  $("today").textContent = "+" + fmt(D.jour) + " $"; $("todayN").textContent = D.comptes + " comptes aujourd'hui";
+  $("ringToday").style.strokeDashoffset = 113 * (1 - Math.min(1, D.jour / D.objectif));
+  $("week").textContent = fmt(D.semaine) + " $"; $("streak").textContent = D.streak + " j";
+  const s = D.series, buys = s.reduce((a, p) => a + p[2], 0), sales = s.reduce((a, p) => a + p[1], 0);
+  $("trajTo").textContent = fmt(D.total) + " $"; $("trajDays").textContent = s.length;
+  $("sVentes").textContent = fmt(D.ventesTotal || sales) + " $"; $("sAchats").textContent = fmt(buys) + " $"; $("sMarge").textContent = Math.round(100 * D.total / (D.ventesTotal || sales)) + " %";
+  const best = s.reduce((a, p) => p[1] > a[1] ? p : a, s[0]);
+  $("best").textContent = fmt(best[1]) + " $"; $("bestD").textContent = "meilleure journée · " + dayLabel(best[0]); $("avg").textContent = fmt(sales / s.length) + " $";
+  $("coinN").textContent = D.comptes; $("today2").textContent = fmt(D.jour) + " $"; $("obj").textContent = Math.round(100 * D.jour / D.objectif) + " %";
+  const lvl = Math.floor(D.total / 1000) + 1, name = LV.filter((l) => lvl >= l[0]).pop()[1];
+  $("lvl").textContent = lvl; $("lvlName").textContent = name;
+  $("lvlTxt").innerHTML = `<b>${fmt(D.total % 1000)} / 1 000 $</b> vers le niveau ${lvl + 1}. Encore <b>${fmt(lvl * 1000 - D.total)} $</b>.`;
+  $("xp").dataset.w = ((D.total % 1000) / 10).toFixed(1);
+  const B = [["📦","1K comptes",D.comptesTotal,1000],["🔥","Série 14 j",D.streak,14],["⚡","500 $ / jour",(D.bestDay && D.bestDay.v) || best[1],500],["💎","10K ventes",D.ventesTotal,10000],["👑","10K bénéfice",D.total,10000]];
+  $("badges").innerHTML = B.map((b) => `<div class="badge ${b[2] >= b[3] ? "ok" : ""}"><div>${b[0]}</div>${b[1]}<small>${b[2] >= b[3] ? "débloqué" : Math.round(100 * b[2] / b[3]) + " %"}</small></div>`).join("");
+  $("next").textContent = fmt(lvl * 1000) + " $";
+  const perDay = sales / s.length * (D.total / (D.ventesTotal || sales));
+  $("outro").innerHTML = `Au rythme actuel (≈ ${fmt(perDay)} $ de bénéfice par jour), le niveau ${lvl + 1} tombe dans <b>${Math.max(1, Math.ceil((lvl * 1000 - D.total) / perDay))} jour(s)</b>.`;
+  const rt = Object.values(D.reg).reduce((a, b) => a + b, 0), rm = Math.max(...Object.values(D.reg));
+  $("regN").textContent = Object.keys(D.reg).length;
+  $("regs").innerHTML = Object.entries(D.reg).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<button class="reg" data-r="${k}"><b>${k}</b><span class="bar"><i data-w="${(100 * v / rm).toFixed(0)}"></i></span><em>${fmt(v)} · ${Math.round(100 * v / rt)} %</em></button>`).join("");
+  document.querySelectorAll(".reg").forEach((b) => { b.onmouseenter = () => focusReg = b.dataset.r; b.onmouseleave = () => focusReg = null; b.onclick = () => flyReg(b.dataset.r); });
+  let pk = [0, 0]; D.heat.forEach((r, d) => r.forEach((v, h) => { if (v > D.heat[pk[0]][pk[1]]) pk = [d, h]; })); $("peakH").textContent = pk[1] + " h"; peak = pk;
+  renderFeed();
 }
-
-// ================= KPI =================
-function lvlInfo() { const lvl = Math.floor(D.total / 1000) + 1; return { lvl, name: [[1,"Rookie"],[3,"Hustler"],[6,"Boss"],[10,"Magnat"],[20,"Légende"]].filter((l) => lvl >= l[0]).pop()[1] }; }
-function renderKpis() {
-  const { lvl, name } = lvlInfo(), daysCount = D.series.length, md = new Date(D.maj).getDate();
-  const K = [
-    { h: "Ventes nettes", v: D.ventesTotal, u: " $", p: "après les frais Eldorado" },
-    { h: "Comptes vendus", v: D.comptesTotal, u: "", p: "un toutes les " + Math.round(daysCount * 24 * 60 / D.comptesTotal) + " min" },
-    { h: MOIS[new Date(D.maj).getMonth()].replace(".", "").replace(/^./, (c) => c.toUpperCase()), v: D.mois, u: " $", p: "moy. " + fmt(D.mois / md) + " $ / jour" },
-    { h: "Série", v: D.streak, u: " j", p: "d'affilée au-dessus de 200 $", bar: D.streak / 14 },
-  ];
-  $("kpis").innerHTML = K.map((k) => `<div class="panel kpi"><h3>${k.h}</h3><b data-k="${k.v}" data-u="${k.u}">0${k.u}</b><p>${k.p}</p>${k.bar ? `<div class="bar"><i style="width:${Math.min(100, k.bar * 100)}%"></i></div>` : ""}</div>`).join("") +
-    `<div class="panel kpi" data-cap="Niveau ${lvl} · ${name}"><h3>Niveau</h3><div class="lvl"><div class="medal">${lvl}</div><div><b style="font-size:20px">${name.toUpperCase()}</b><p>encore ${fmt(lvl * 1000 - D.total)} $ → niv. ${lvl + 1}</p></div></div><div class="bar"><i style="width:${((D.total % 1000) / 10).toFixed(1)}%"></i></div></div>`;
-  bindTilt(); kpiCount();
-}
-function kpiCount() { document.querySelectorAll("[data-k]").forEach((el, j) => { const to = +el.dataset.k, u = el.dataset.u, s = performance.now() + j * 120;
-  (function step(n) { const k = reduce ? 1 : Math.max(0, Math.min(1, (n - s) / 1700)), e = 1 - Math.pow(1 - k, 4); el.textContent = fmt(to * e) + u; if (k < 1) requestAnimationFrame(step); })(performance.now()); }); }
-
-// ================= Graphique (avec comète) =================
-const chart = $("chart"), cg = chart.getContext("2d");
-let view = "cum", range = null, drag = null, hoverI = -1, anim = 1;
-function sizeCanvas(c) { const r = c.getBoundingClientRect(); const w = Math.round(r.width * devicePixelRatio), h = Math.round(r.height * devicePixelRatio); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return r; }
-function drawChart(now = performance.now()) {
-  if (!range) range = [0, D.series.length - 1];
-  const r = sizeCanvas(chart), W = r.width, H = r.height, g = cg; g.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); g.clearRect(0, 0, W, H);
-  const pts = D.series.slice(range[0], range[1] + 1), L = 46, R = 14, T = 18, B = 26, w = W - L - R, h = H - T - B;
-  const vals = pts.map((p) => view === "cum" ? p[3] : p[1]);
-  const mn = view === "cum" ? Math.min(0, ...vals) : 0, mx = Math.max(...vals) * 1.1;
-  const X = (i) => L + (pts.length === 1 ? w / 2 : (i / (pts.length - 1)) * w), Y = (v) => T + h - ((v - mn) / (mx - mn)) * h;
-  g.font = "400 10px JetBrains Mono, monospace"; g.fillStyle = "#9a96bf"; g.textAlign = "right"; g.textBaseline = "middle";
-  const raw = (mx - mn) / 5, mag = Math.pow(10, Math.floor(Math.log10(raw || 1))), step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
-  for (let v = Math.ceil(mn / step) * step; v <= mx; v += step) { g.strokeStyle = "rgba(160,150,255,.09)"; g.beginPath(); g.moveTo(L, Y(v)); g.lineTo(W - R, Y(v)); g.stroke(); g.fillText(fmt(v), L - 8, Y(v)); }
-  g.textAlign = "center"; g.textBaseline = "top";
-  const every = Math.ceil(pts.length / 8);
-  pts.forEach((p, i) => { if (i % every === 0 || i === pts.length - 1) g.fillText(dayLabel(p[0]), X(i), H - B + 8); });
-  const n = Math.max(1, Math.ceil(pts.length * anim));
-  if (view === "cum") {
-    const grd = g.createLinearGradient(0, T, 0, T + h); grd.addColorStop(0, "rgba(255,79,180,.45)"); grd.addColorStop(.6, "rgba(138,107,255,.15)"); grd.addColorStop(1, "rgba(138,107,255,0)");
-    g.beginPath(); g.moveTo(X(0), Y(mn)); for (let i = 0; i < n; i++) g.lineTo(X(i), Y(vals[i])); g.lineTo(X(n - 1), Y(mn)); g.closePath(); g.fillStyle = grd; g.fill();
-    // balayage lumineux
-    if (!reduce) { const sx = L + ((now / 3200) % 1.4) * w; const sw = g.createLinearGradient(sx - 90, 0, sx + 10, 0); sw.addColorStop(0, "rgba(255,255,255,0)"); sw.addColorStop(1, "rgba(255,255,255,.10)");
-      g.save(); g.beginPath(); g.moveTo(X(0), Y(mn)); for (let i = 0; i < n; i++) g.lineTo(X(i), Y(vals[i])); g.lineTo(X(n - 1), Y(mn)); g.closePath(); g.clip(); g.fillStyle = sw; g.fillRect(sx - 90, T, 100, h); g.restore(); }
-    const lg = g.createLinearGradient(L, 0, W - R, 0); lg.addColorStop(0, "#8a6bff"); lg.addColorStop(.6, "#ff4fb4"); lg.addColorStop(1, "#ffc861");
-    g.shadowColor = "rgba(255,79,180,.8)"; g.shadowBlur = 16; g.strokeStyle = lg; g.lineWidth = 3; g.lineJoin = "round";
-    g.beginPath(); for (let i = 0; i < n; i++) i ? g.lineTo(X(i), Y(vals[i])) : g.moveTo(X(i), Y(vals[i])); g.stroke(); g.shadowBlur = 0;
-    g.font = "600 9px JetBrains Mono, monospace";
-    for (let m = 1000; m <= mx; m += 1000) { const i = vals.findIndex((v) => v >= m); if (i >= 0 && i < n) { g.fillStyle = "#ffc861"; g.beginPath(); g.arc(X(i), Y(vals[i]), 3.5, 0, 7); g.fill(); g.fillStyle = "rgba(255,200,97,.85)"; g.fillText(fmt(m / 1000) + "K", X(i), Y(vals[i]) - 16); } }
-    // comète
-    if (!reduce && anim >= 1 && pts.length > 1) { const f = ((now / 4200) % 1) * (pts.length - 1), i0 = Math.floor(f), t = f - i0, x = X(i0) + (X(i0 + 1) - X(i0)) * t, y = Y(vals[i0]) + (Y(vals[i0 + 1]) - Y(vals[i0])) * t;
-      for (let k = 6; k >= 1; k--) { g.fillStyle = `rgba(255,${150 + k * 15},${200 - k * 20},${.08 * k})`; g.beginPath(); g.arc(x, y, 3 + k * 2.6, 0, 7); g.fill(); }
-      g.fillStyle = "#fff"; g.beginPath(); g.arc(x, y, 3.2, 0, 7); g.fill(); }
-    // dernier point pulsant
-    const lx = X(n - 1), ly = Y(vals[n - 1]), pr = 6 + (reduce ? 0 : 6 * ((now / 900) % 1));
-    g.strokeStyle = `rgba(255,200,97,${reduce ? .6 : 1 - ((now / 900) % 1)})`; g.lineWidth = 2; g.beginPath(); g.arc(lx, ly, pr, 0, 7); g.stroke();
-    g.fillStyle = "#ffc861"; g.beginPath(); g.arc(lx, ly, 4.5, 0, 7); g.fill();
-  } else {
-    const bw = Math.max(2, w / pts.length * .62);
-    for (let i = 0; i < n; i++) { const v = vals[i], x = X(i) - bw / 2, y = Y(v), hot = v >= 200, wob = reduce ? 0 : Math.sin(now / 500 + i * .6) * 1.5;
-      const grd = g.createLinearGradient(0, y, 0, Y(0)); grd.addColorStop(0, hot ? "#ffc861" : "#4fe3ff"); grd.addColorStop(1, hot ? "rgba(255,79,180,.5)" : "rgba(138,107,255,.35)");
-      g.fillStyle = grd; g.shadowColor = hot ? "rgba(255,200,97,.6)" : "transparent"; g.shadowBlur = hot ? 12 : 0; g.beginPath(); g.roundRect(x, y + wob, bw, Y(0) - y - wob, 3); g.fill(); }
-    g.shadowBlur = 0; g.setLineDash([5, 5]); g.lineDashOffset = -(now / 40); g.strokeStyle = "rgba(255,200,97,.7)"; g.beginPath(); g.moveTo(L, Y(200)); g.lineTo(W - R, Y(200)); g.stroke(); g.setLineDash([]);
-    g.textAlign = "left"; g.fillStyle = "rgba(255,200,97,.9)"; g.fillText("objectif 200 $", L + 6, Y(200) - 14);
-  }
-  if (hoverI >= 0 && hoverI < pts.length) { const x = X(hoverI); g.strokeStyle = "rgba(255,255,255,.35)"; g.lineWidth = 1; g.beginPath(); g.moveTo(x, T); g.lineTo(x, T + h); g.stroke();
-    g.fillStyle = "#fff"; g.beginPath(); g.arc(x, Y(vals[hoverI]), 5, 0, 7); g.fill(); g.strokeStyle = "#ff4fb4"; g.lineWidth = 2; g.stroke(); }
-  if (drag && drag.x1 !== undefined) { g.fillStyle = "rgba(79,227,255,.12)"; g.fillRect(Math.min(drag.x0, drag.x1), T, Math.abs(drag.x1 - drag.x0), h); }
-  $("rangeTxt").textContent = dayLabel(pts[0][0]) + " → " + dayLabel(pts[pts.length - 1][0]) + " · " + pts.length + " jours";
-  chart._geo = { L, w, n: pts.length };
-}
-function idxAt(x) { const { L, w, n } = chart._geo; return Math.max(0, Math.min(n - 1, Math.round(((x - L) / w) * (n - 1)))); }
-chart.addEventListener("mousemove", (e) => { const r = chart.getBoundingClientRect(), x = e.clientX - r.left; hoverI = idxAt(x); if (drag) drag.x1 = x;
-  const p = D.series[range[0] + hoverI]; showTip(e.clientX, e.clientY, `${dayLabel(p[0])}<small>ventes ${fmt(p[1])} $ · ${p[4]} comptes${p[2] ? " · achat " + fmt(p[2]) + " $" : ""} · cumul ${fmt(p[3])} $</small>`); });
-chart.addEventListener("mouseleave", () => { hoverI = -1; drag = null; hideTip(); });
-chart.addEventListener("mousedown", (e) => { const r = chart.getBoundingClientRect(); drag = { x0: e.clientX - r.left }; });
-addEventListener("mouseup", () => { if (!drag || drag.x1 === undefined) { drag = null; return; }
-  const a = idxAt(Math.min(drag.x0, drag.x1)), b = idxAt(Math.max(drag.x0, drag.x1)); drag = null; if (b - a >= 2) { range = [range[0] + a, range[0] + b]; animChart(); } });
-chart.addEventListener("dblclick", () => { range = null; animChart(); });
-function animChart() { if (reduce) { anim = 1; return; } const s = performance.now(); (function st(n) { anim = Math.min(1, (n - s) / 1300); if (anim < 1) requestAnimationFrame(st); })(s); anim = 0; }
-const setView = (v) => { view = v; $("vCum").setAttribute("aria-pressed", v === "cum"); $("vDay").setAttribute("aria-pressed", v === "day"); animChart(); };
-$("vCum").onclick = () => setView("cum"); $("vDay").onclick = () => setView("day");
-
-// ================= Heatmap =================
-const heat = $("heat"), hg = heat.getContext("2d");
 let peak = [0, 0];
-function findPeak() { peak = [0, 0]; D.heat.forEach((row, d) => row.forEach((v, h) => { if (v > D.heat[peak[0]][peak[1]]) peak = [d, h]; })); $("peakTxt").textContent = "pic : " + JOURS[peak[0]].toLowerCase() + " " + peak[1] + " h"; }
-function drawHeat(now = performance.now()) {
-  const r = sizeCanvas(heat), W = r.width, H = r.height, hmax = Math.max(...D.heat.flat()); hg.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); hg.clearRect(0, 0, W, H);
-  const L = 30, cw = (W - L) / 24, ch = H / 7, nowH = new Date().getHours(), nowD = (new Date().getDay() + 6) % 7;
-  hg.font = "400 10px JetBrains Mono, monospace"; hg.textBaseline = "middle";
-  D.heat.forEach((row, d) => { hg.fillStyle = "#9a96bf"; hg.fillText(JOURS[d], 0, d * ch + ch / 2);
-    row.forEach((v, h) => { const wave = reduce ? 0 : .18 * Math.sin(now / 600 - h * .35 - d * .5), k = Math.max(0, Math.min(1, v / hmax + wave * (v / hmax))), isPeak = d === peak[0] && h === peak[1];
-      hg.fillStyle = k < .5 ? `rgba(138,107,255,${.12 + k * 1.2})` : `rgba(255,${Math.round(79 + (k - .5) * 240)},${Math.round(180 - (k - .5) * 160)},${.5 + k * .5})`;
-      if (isPeak) { hg.shadowColor = "#ffc861"; hg.shadowBlur = 12 + (reduce ? 0 : 10 * Math.abs(Math.sin(now / 400))); }
-      hg.beginPath(); hg.roundRect(L + h * cw + 1.5, d * ch + 1.5, cw - 3, ch - 3, 3); hg.fill(); hg.shadowBlur = 0;
-      if (d === nowD && h === nowH) { hg.strokeStyle = "#4cf0a5"; hg.lineWidth = 1.5; hg.strokeRect(L + h * cw + 1, d * ch + 1, cw - 2, ch - 2); } }); });
-  heat._geo = { L, cw, ch };
+function renderFeed(highlight = 0) {
+  const items = D.log.slice(-5).reverse();
+  $("feed").innerHTML = items.map((o, i) => `<li class="${i < highlight ? "new" : ""}"><time>${o.t.slice(11, 16)}</time><span>${o.r}${discret ? "" : " · " + o.c}</span><b>+${(+o.p).toFixed(2)}</b></li>`).join("");
+  $("feedN").textContent = D.comptes + " auj.";
 }
-heat.addEventListener("mousemove", (e) => { const r = heat.getBoundingClientRect(), { L, cw, ch } = heat._geo, h = Math.floor((e.clientX - r.left - L) / cw), d = Math.floor((e.clientY - r.top) / ch);
-  if (h >= 0 && h < 24 && d >= 0 && d < 7) showTip(e.clientX, e.clientY, `${JOURS[d]} · ${h} h<small>${D.heat[d][h]} comptes vendus</small>`); else hideTip(); });
-heat.addEventListener("mouseleave", hideTip);
-
-// ================= Fil des ventes =================
-const ticker = $("ticker");
-const tickHTML = (o, i) => `<div class="tick" style="animation-delay:${i * 70}ms"><time>${o.t.slice(11, 16)}</time><span>${o.r}<em> · ${discret ? (o.c === "LoLPrime" ? "compte 2" : "compte 1") : o.c}</em></span><b>+${(+o.p).toFixed(2)} $</b></div>`;
-function renderFeed() { ticker.innerHTML = D.log.slice().reverse().map(tickHTML).join(""); $("feedN").textContent = D.comptes + " aujourd'hui"; }
 $("discret").onclick = () => { discret = !discret; $("discret").setAttribute("aria-pressed", discret); renderFeed(); };
+setInterval(() => ($("clock").textContent = new Date().toLocaleTimeString("fr-CH", { hour: "2-digit", minute: "2-digit" })), 1000);
 
-// ================= Inclinaison 3D + lumière qui suit la souris =================
-function bindTilt() {
-  document.querySelectorAll(".panel").forEach((p) => { if (p._tilt) return; p._tilt = true;
-    p.addEventListener("mousemove", (e) => { if (document.body.classList.contains("cinema") || reduce) return; const r = p.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-      p.style.setProperty("--mx", x * 100 + "%"); p.style.setProperty("--my", y * 100 + "%"); p.style.setProperty("--glow", 1);
-      const strong = p.querySelector("canvas") ? 2 : 5;
-      p.style.transition = "transform .15s ease-out, opacity .9s, filter .9s"; p.style.transform = `perspective(1200px) rotateX(${(.5 - y) * strong}deg) rotateY(${(x - .5) * strong}deg) translateZ(6px)`; });
-    p.addEventListener("mouseleave", () => { if (document.body.classList.contains("cinema")) return; p.style.setProperty("--glow", 0); p.style.transition = ""; p.style.transform = ""; });
-  });
+// ---------------- Scroll & chapitres ----------------
+const chs = [...document.querySelectorAll(".ch")];
+$("segs").innerHTML = chs.map((c, i) => `<button aria-label="Chapitre ${i + 1} : ${c.dataset.t}"><i></i></button>`).join("");
+const segBtns = [...$("segs").children];
+segBtns.forEach((b, i) => (b.onclick = () => goTo(i)));
+function chState() {
+  const y = scrollY, vh = innerHeight; let idx = 0;
+  const local = chs.map((c, i) => { const top = c.offsetTop, h = c.offsetHeight - vh; const p = Math.max(0, Math.min(1, (y - top) / Math.max(1, h))); if (y >= top - vh * .4) idx = i; return p; });
+  return { idx, local };
 }
-
-// ================= 3D =================
-const has3D = typeof THREE !== "undefined";
-function makeView(box, fov, pos) {
-  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r.setPixelRatio(Math.min(2, devicePixelRatio));
-  box.appendChild(r.domElement); const s = new THREE.Scene(), c = new THREE.PerspectiveCamera(fov, 1, .1, 500); c.position.set(...pos);
-  const ctl = THREE.OrbitControls ? new THREE.OrbitControls(c, r.domElement) : null;
-  if (ctl) { ctl.enableDamping = true; ctl.dampingFactor = .07; ctl.enablePan = false; }
-  const fit = () => { const w = box.clientWidth, h = box.clientHeight; if (!w || !h) return; r.setSize(w, h, false); c.aspect = w / h; c.updateProjectionMatrix(); };
-  fit(); addEventListener("resize", fit); new ResizeObserver(fit).observe(box);
-  return { r, s, c, ctl, box, fit };
-}
-function glowSprite(hex) { const cv = document.createElement("canvas"); cv.width = cv.height = 64; const g = cv.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-  gr.addColorStop(0, hex); gr.addColorStop(.3, hex + "88"); gr.addColorStop(1, hex + "00"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(cv); }
-const ll = (lat, lon, r) => { const ph = (90 - lat) * Math.PI / 180, th = (lon + 180) * Math.PI / 180; return new THREE.Vector3(-r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)); };
-const PLACES = { EUW: [48.8, 2.3], EUNE: [52.2, 21.0], NA: [41.9, -87.6], BR: [-23.5, -46.6], LAS: [-33.4, -70.6], LAN: [19.4, -99.1], ME: [25.2, 55.3] };
-let G = null, arcs = {}, focusReg = null, pulses = [], flights = [];
-function flyTo(V, target, dur = 1500) { flights.push({ V, from: V.c.position.clone(), target, s: performance.now(), dur }); }
-function renderRegions() {
-  const regTotal = Object.values(D.reg).reduce((a, b) => a + b, 0);
-  $("regTotal").textContent = fmt(regTotal) + " comptes LoL";
-  $("regChips").innerHTML = Object.entries(D.reg).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<button class="chip" data-r="${k}">${k}<em>${fmt(v)} · ${Math.round(100 * v / regTotal)} %</em></button>`).join("");
-  document.querySelectorAll("[data-r]").forEach((b) => {
-    b.onmouseenter = () => { focusReg = b.dataset.r; b.classList.add("on"); };
-    b.onmouseleave = () => { focusReg = null; b.classList.remove("on"); };
-    b.onclick = () => { if (!G || !PLACES[b.dataset.r]) return; const [la, lo] = PLACES[b.dataset.r]; flyTo(G, ll(la, lo, 1).applyEuler(G.grp.rotation).applyEuler(G.spin.rotation).normalize().multiplyScalar(4.3)); };
-  });
-}
-function buildGlobe() {
-  G = makeView($("globeBox"), 45, [0, 1.2, 6.8]);
-  if (G.ctl) { G.ctl.minDistance = 3.2; G.ctl.maxDistance = 11; }
-  const R = 1.9, spin = new THREE.Group(), grp = new THREE.Group(); spin.add(grp); G.s.add(spin); G.spin = spin; G.grp = grp; G.R = R;
-  const geo = new THREE.BufferGeometry(), N = 3600, p = new Float32Array(N * 3);
-  for (let i = 0; i < N; i++) { const y = 1 - (i / (N - 1)) * 2, rr = Math.sqrt(1 - y * y), th = i * Math.PI * (3 - Math.sqrt(5)); p.set([Math.cos(th) * rr * R, y * R, Math.sin(th) * rr * R], i * 3); }
-  geo.setAttribute("position", new THREE.BufferAttribute(p, 3));
-  grp.add(new THREE.Points(geo, new THREE.PointsMaterial({ size: .03, color: 0x8fdcff, transparent: true, opacity: .55 })));
-  grp.add(new THREE.Mesh(new THREE.SphereGeometry(R * .985, 48, 48), new THREE.MeshBasicMaterial({ color: 0x0b0a22, transparent: true, opacity: .85 })));
-  const gridM = new THREE.LineBasicMaterial({ color: 0x8a6bff, transparent: true, opacity: .18 });
-  for (let la = -60; la <= 60; la += 30) { const pts = []; for (let lo = 0; lo <= 360; lo += 5) pts.push(ll(la, lo, R * 1.003)); grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridM)); }
-  for (let lo = 0; lo < 360; lo += 30) { const pts = []; for (let la = -90; la <= 90; la += 5) pts.push(ll(la, lo, R * 1.003)); grp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridM)); }
-  // anneaux orbitaux et satellites
-  const ringM = new THREE.MeshBasicMaterial({ color: 0xff4fb4, transparent: true, opacity: .35, side: THREE.DoubleSide });
-  [[2.6, .35, .9], [3.0, -.5, .2]].forEach(([rad, tx, tz]) => { const ring = new THREE.Mesh(new THREE.RingGeometry(rad, rad + .012, 128), ringM.clone()); ring.rotation.set(Math.PI / 2 + tx, tz, 0); G.s.add(ring);
-    const sat = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite("#ffc861"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); sat.scale.set(.3, .3, 1); ring.add(sat); sat.userData = { rad, sp: .4 + Math.random() * .3 }; ring.userData.sat = sat; (G.rings = G.rings || []).push(ring); });
-  const atm = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite("#4fe3ff"), transparent: true, opacity: .35, depthWrite: false, blending: THREE.AdditiveBlending })); atm.scale.set(R * 3.2, R * 3.2, 1); G.s.add(atm);
-  const home = ll(46.8, 8.2, R); G.home = home;
-  const hm = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite("#ffffff"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); hm.position.copy(home); hm.scale.set(.35, .35, 1); grp.add(hm);
-  const regMax = Math.max(...Object.values(D.reg));
-  Object.entries(PLACES).forEach(([k, [la, lo]]) => { if (!D.reg[k]) return;
-    const pt = ll(la, lo, R), w = D.reg[k] / regMax;
-    const col = new THREE.Mesh(new THREE.CylinderGeometry(.02 + .03 * w, .02 + .03 * w, .12 + .5 * w, 12), new THREE.MeshBasicMaterial({ color: 0xffc861, transparent: true, opacity: .9 }));
-    col.position.copy(pt.clone().multiplyScalar(1 + (.06 + .25 * w) / R)); col.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pt.clone().normalize()); grp.add(col);
-    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite("#ff4fb4"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); gl.position.copy(pt); gl.scale.set(.4 + .7 * w, .4 + .7 * w, 1); gl.userData.b = .4 + .7 * w; grp.add(gl);
-    const mid = home.clone().add(pt).multiplyScalar(.5).normalize().multiplyScalar(R * (1.1 + home.distanceTo(pt) * .13));
-    const curve = new THREE.QuadraticBezierCurve3(home, mid, pt), g2 = new THREE.BufferGeometry().setFromPoints(curve.getPoints(80));
-    const line = new THREE.Line(g2, new THREE.LineBasicMaterial({ color: 0xff4fb4, transparent: true, opacity: .4 + .5 * w, blending: THREE.AdditiveBlending }));
-    grp.add(line); arcs[k] = { line, gl, off: Math.random(), curve, pt };
-  });
-  grp.rotation.x = .3;
-}
-// une vente = un éclair qui part de la Suisse vers la région
-function pulseRegion(k) {
-  if (!G) return; const a = arcs[k] || arcs[Object.keys(arcs)[Math.floor(Math.random() * Object.keys(arcs).length)]]; if (!a) return;
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite("#ffc861"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.scale.set(.5, .5, 1); G.grp.add(s);
-  const ring = new THREE.Mesh(new THREE.RingGeometry(.05, .09, 48), new THREE.MeshBasicMaterial({ color: 0xffc861, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
-  ring.position.copy(a.pt.clone().multiplyScalar(1.01)); ring.lookAt(a.pt.clone().multiplyScalar(2)); G.grp.add(ring);
-  pulses.push({ a, s, ring, t0: performance.now() });
+function goTo(i, smooth = true) { i = Math.max(0, Math.min(chs.length - 1, i)); scrollTo({ top: chs[i].offsetTop + (i ? innerHeight * .15 : 0), behavior: smooth && !reduce ? "smooth" : "auto" }); }
+$("prev").onclick = () => goTo(chState().idx - 1); $("next").onclick = () => goTo(chState().idx + 1);
+$("top").onclick = () => goTo(0);
+const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); onReveal(e.target); } }), { threshold: .25 });
+document.querySelectorAll(".reveal").forEach((r) => io.observe(r));
+function onReveal(r) {
+  r.querySelectorAll(".reg .bar i").forEach((i) => (i.style.width = i.dataset.w + "%"));
+  const xp = r.querySelector("#xp"); if (xp) xp.style.width = xp.dataset.w + "%";
+  if (r.closest(".ch") === chs[4]) startJar();
 }
 
-let C = null, towers = [];
-function buildCity() {
-  if (!C) {
-    C = makeView($("cityBox"), 42, [10, 9.5, 12]);
-    if (C.ctl) { C.ctl.minDistance = 6; C.ctl.maxDistance = 30; C.ctl.maxPolarAngle = Math.PI * .48; C.ctl.autoRotate = !reduce; C.ctl.autoRotateSpeed = .6; }
-    C.s.add(new THREE.AmbientLight(0x6655aa, .9));
-    const dl = new THREE.DirectionalLight(0xffffff, .9); dl.position.set(5, 12, 6); C.s.add(dl);
-    C.pl = new THREE.PointLight(0xff4fb4, 1.4, 40); C.pl.position.set(-6, 6, -4); C.s.add(C.pl);
-    const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
-    C.r.domElement.addEventListener("mousemove", (e) => { const r = C.r.domElement.getBoundingClientRect(); mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-      ray.setFromCamera(mouse, C.c); const hit = ray.intersectObjects(towers)[0]; towers.forEach((t) => t.userData.hover = t === (hit && hit.object));
-      if (hit) { const p = hit.object.userData.p; showTip(e.clientX, e.clientY, `${JOURS[(new Date(p[0] + "T12:00:00").getDay() + 6) % 7]} ${dayLabel(p[0])}<small>${fmt(p[1])} $ · ${p[4]} comptes</small>`); } else hideTip(); });
-    C.r.domElement.addEventListener("mouseleave", hideTip);
-  }
-  (C.city || []).forEach((o) => C.s.remove(o)); C.city = []; towers = [];
-  const first = new Date(D.series[0][0] + "T12:00:00"), mon0 = new Date(first); mon0.setDate(first.getDate() - ((first.getDay() + 6) % 7));
-  const maxV = Math.max(...D.series.map((p) => p[1]));
-  const weeks = Math.ceil((new Date(D.series[D.series.length - 1][0] + "T12:00:00") - mon0) / 6048e5) + 1;
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(7 * 1.3 + 2, weeks * 1.3 + 2), new THREE.MeshStandardMaterial({ color: 0x0d0b20, metalness: .2, roughness: .8, transparent: true, opacity: .9 }));
-  floor.rotation.x = -Math.PI / 2; C.s.add(floor); C.city.push(floor);
-  const gridH = new THREE.GridHelper(Math.max(7, weeks) * 1.3 + 2, Math.max(7, weeks) + 2, 0x8a6bff, 0x2a2450); gridH.position.y = .01; gridH.material.transparent = true; gridH.material.opacity = .35; C.s.add(gridH); C.city.push(gridH);
-  D.series.forEach((p, i) => {
-    const d = new Date(p[0] + "T12:00:00"), wd = (d.getDay() + 6) % 7, wk = Math.floor((d - mon0) / 6048e5);
-    const hgt = .15 + (p[1] / maxV) * 6, last = i === D.series.length - 1, k = p[1] / maxV;
-    const col = last ? new THREE.Color(0xff4fb4) : new THREE.Color(0x4fe3ff).lerp(new THREE.Color(0x8a6bff), Math.min(1, k * 1.6)).lerp(new THREE.Color(0xffc861), Math.max(0, k - .55) * 2.2);
-    const m = new THREE.Mesh(new THREE.BoxGeometry(.95, 1, .95), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: last ? .8 : .35, metalness: .3, roughness: .35, transparent: true, opacity: .92 }));
-    m.position.set((wd - 3) * 1.3, 0, (wk - (weeks - 1) / 2) * 1.3); m.userData = { p, h: hgt, delay: i * 35, last };
-    m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: .25 })));
-    C.s.add(m); towers.push(m); C.city.push(m);
-  });
-  towersStart = performance.now();
-}
-let towersStart = performance.now();
-function regrowTowers() { towers.forEach((t, i) => t.userData.delay = i * 35); towersStart = performance.now(); }
-
-// ================= Particules (pièces) =================
-const fx = $("fx"), fg = fx.getContext("2d"); let parts = [];
-const sizeFx = () => { fx.width = innerWidth * devicePixelRatio; fx.height = innerHeight * devicePixelRatio; }; sizeFx(); addEventListener("resize", sizeFx);
-function burst(from, to, n = 46) {
-  for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 7;
-    parts.push({ x: from.x, y: from.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 3, life: 0, max: 70 + Math.random() * 40, tx: to.x + (Math.random() - .5) * 60, ty: to.y + (Math.random() - .5) * 20, hue: Math.random() < .6 ? 42 : 325, r: 2 + Math.random() * 3 }); }
-}
-(function fxLoop() {
-  fg.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); fg.clearRect(0, 0, innerWidth, innerHeight);
-  parts = parts.filter((p) => { p.life++; const k = p.life / p.max;
-    if (k < .35) { p.vx *= .94; p.vy = p.vy * .94 + .15; } else { p.vx += (p.tx - p.x) * .012; p.vy += (p.ty - p.y) * .012; p.vx *= .86; p.vy *= .86; }
-    p.x += p.vx; p.y += p.vy;
-    fg.fillStyle = `hsla(${p.hue},100%,70%,${1 - Math.max(0, k - .8) * 5})`; fg.shadowColor = `hsl(${p.hue},100%,60%)`; fg.shadowBlur = 12;
-    fg.beginPath(); fg.arc(p.x, p.y, p.r, 0, 7); fg.fill(); return k < 1; });
-  fg.shadowBlur = 0; requestAnimationFrame(fxLoop);
-})();
-
-// ================= Célébration d'une vente =================
-const regionOf = (r) => (r || "").split(" ")[0];
-function celebrate(o, replay) {
-  $("toastAmt").textContent = "+" + (+o.p).toFixed(2) + " $";
-  $("toastTxt").textContent = (replay ? "dernière vente · " : "nouvelle vente · ") + o.r + " · " + o.t.slice(11, 16);
-  const t = $("toast"); t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 4200);
-  warp = Math.max(warp, reduce ? 0 : 1.4);
-  const g = $("globeBox").getBoundingClientRect(), tot = $("total").getBoundingClientRect();
-  if (!reduce) burst({ x: g.left + g.width / 2, y: g.top + g.height / 2 }, { x: tot.left + tot.width * .7, y: tot.top + tot.height / 2 });
-  pulseRegion(regionOf(o.r));
-  if (replay) { const real = D.total; D.total = real - (+o.p * .85); heroCount(false); setTimeout(() => { D.total = real; heroCount(false); }, 650); }
-  else heroCount(false);
-  document.querySelector(".hero").classList.remove("flash"); void document.body.offsetWidth; document.querySelector(".hero").classList.add("flash");
-  const lastT = towers[towers.length - 1]; if (lastT) lastT.userData.bump = performance.now();
-}
-$("replay").onclick = () => { const o = D.log[D.log.length - 1]; if (o) celebrate(o, true); };
-
-// ================= Données en direct (quand la page est servie avec stats.json) =================
-let live = false;
-async function poll() {
-  try {
-    const r = await fetch("stats.json?t=" + Date.now(), { cache: "no-store" }); if (!r.ok) throw 0;
-    const s = await r.json(); if (!s || typeof s.total !== "number") throw 0;
-    live = true; $("status").textContent = "LIVE"; $("status").classList.add("live");
-    merge(s);
-  } catch (e) { if (!live) $("status").textContent = "données figées"; }
-}
-function merge(s) {
-  const key = (o) => o.t + "|" + o.p, known = new Set(D.log.map(key));
-  const log = (s.log || []).slice().sort((a, b) => a.t < b.t ? -1 : 1).slice(-14).map((x) => ({ t: x.t, p: x.p, r: x.r || "LoL", c: x.c || "Orbyn" }));
-  const fresh = log.filter((o) => !known.has(key(o)));
-  const firstLoad = !merge.done; merge.done = true;
-  Object.assign(D, { total: s.total, ventesTotal: s.ventesTotal ?? D.ventesTotal, comptesTotal: s.comptesTotal ?? D.comptesTotal, mois: s.mois, semaine: s.semaine, jour: s.jour, comptes: s.comptes, streak: s.streak, stock: s.stock, maj: s.maj || D.maj, log });
-  if (Array.isArray(s.hist) && s.hist.length) D.series = s.hist.map((x) => x.slice());
-  if (Array.isArray(s.heat)) D.heat = s.heat;
-  if (s.reg) D.reg = s.reg;
-  (s.jours7 || []).forEach((j) => { if (j.d > D.series[D.series.length - 1][0]) { const prev = D.series[D.series.length - 1]; D.series.push([j.d, j.v, 0, prev[3] + j.v, 0]); } });
-  const lastS = D.series[D.series.length - 1];
-  if (lastS[0] === s.date) { lastS[1] = s.jour; lastS[4] = s.comptes; } lastS[3] = s.total;
-  renderHead(); renderFeed(); findPeak();
-  if (towers.length !== D.series.length && has3D) buildCity(); else if (towers.length) { const t = towers[towers.length - 1], maxV = Math.max(...D.series.map((p) => p[1])); t.userData.p = lastS; t.userData.h = .15 + (lastS[1] / maxV) * 6; }
-  if (firstLoad && !fresh.length) { heroCount(false); renderKpis(); return; }
-  if (fresh.length) { renderKpis(); fresh.slice(-5).forEach((o, i) => setTimeout(() => celebrate(o), i * 1800)); }
-}
-
-// ================= Boucle principale =================
-function loop(now) {
-  flights = flights.filter((f) => { const k = Math.min(1, (now - f.s) / f.dur), e = k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2; f.V.c.position.lerpVectors(f.from, f.target, e); return k < 1; });
-  drawChart(now); drawHeat(now);
-  if (G) {
-    if (!reduce && !flights.some((f) => f.V === G)) G.spin.rotation.y += .0022;
-    (G.rings || []).forEach((r, i) => { const a = now / 1000 * r.userData.sat.userData.sp + i * 2; r.userData.sat.position.set(Math.cos(a) * r.userData.sat.userData.rad, Math.sin(a) * r.userData.sat.userData.rad, 0); });
-    Object.entries(arcs).forEach(([k, a], i) => { const n = Math.floor(81 * Math.min(1, ((now / 2400 + a.off) % 1.5)));
-      a.line.geometry.setDrawRange(0, focusReg && focusReg !== k ? 0 : n); a.line.material.opacity = focusReg === k ? 1 : .6;
-      const s = a.gl.userData.b * (focusReg === k ? 1.8 : 1 + .25 * Math.sin(now / 300 + i)); a.gl.scale.set(s, s, 1); });
-    pulses = pulses.filter((p) => { const k = (now - p.t0) / 1500; if (k < .6) { const pos = p.a.curve.getPoint(Math.min(1, k / .6)); p.s.position.copy(pos); }
-      else { p.s.visible = false; const r = 1 + (k - .6) * 14; p.ring.scale.set(r, r, r); p.ring.material.opacity = Math.max(0, 1 - (k - .6) * 2.5); }
-      if (k >= 1) { G.grp.remove(p.s); G.grp.remove(p.ring); return false; } return true; });
-    if (G.ctl) G.ctl.update(); G.r.render(G.s, G.c);
-  }
-  if (C) {
-    towers.forEach((t) => { const k = reduce ? 1 : Math.min(1, Math.max(0, (now - towersStart - t.userData.delay) / 900)), e = 1 - Math.pow(1 - k, 3);
-      const bump = t.userData.bump ? Math.max(0, 1 - (now - t.userData.bump) / 900) : 0;
-      const breathe = t.userData.last && !reduce ? .06 * Math.sin(now / 350) : 0;
-      const h = Math.max(.001, t.userData.h * e * (1 + bump * .25 + breathe)); t.scale.y = h; t.position.y = h / 2;
-      t.material.emissiveIntensity = t.userData.hover ? 1.2 : t.userData.last ? .8 + .3 * Math.sin(now / 300) : .35; });
-    if (C.pl && !reduce) C.pl.position.set(Math.cos(now / 2000) * 8, 6, Math.sin(now / 2000) * 8);
-    if (C.ctl) C.ctl.update(); C.r.render(C.s, C.c);
-  }
-  requestAnimationFrame(loop);
-}
-
-// ================= Mode cinéma =================
-let cineT = null, cineStep = 0;
-const cinePanels = () => [...document.querySelectorAll(".panel")].filter((p) => p.dataset.cap);
-function clearZoom() { cinePanels().forEach((x) => { x.classList.remove("focus"); x.style.transform = ""; x.style.transition = ""; }); }
-function cineGo() {
-  const list = cinePanels(), p = list[cineStep % list.length]; cineStep++;
-  clearZoom(); warp = Math.max(warp, reduce ? 0 : .9);
-  p.scrollIntoView({ behavior: "instant", block: "center" });
-  requestAnimationFrame(() => {
-    const r = p.getBoundingClientRect(), sc = Math.max(1, Math.min(innerWidth * .9 / r.width, innerHeight * .78 / r.height, 1.9));
-    const dx = innerWidth / 2 - (r.left + r.width / 2), dy = innerHeight / 2 - (r.top + r.height / 2);
-    p.classList.add("focus"); p.style.transition = "transform 1.2s cubic-bezier(.16,1,.3,1), opacity .9s, filter .9s";
-    p.style.transform = `translate(${dx}px, ${dy}px) scale(${sc})`;
-    $("caption").textContent = p.dataset.cap;
-  });
-  if (p.classList.contains("hero")) { heroCount(true); setView(cineStep % 2 ? "cum" : "day"); }
-  if (p.classList.contains("globe") && G) { flyTo(G, new THREE.Vector3(2.2, .9, 3.6), 2200); setTimeout(() => flyTo(G, new THREE.Vector3(0, 1.2, 6.8), 2200), 3000); setTimeout(() => { const o = D.log[D.log.length - 1]; if (o) pulseRegion(regionOf(o.r)); }, 1200); }
-  if (p.classList.contains("city") && C) { regrowTowers(); flyTo(C, new THREE.Vector3(-9, 5, 9), 2600); setTimeout(() => flyTo(C, new THREE.Vector3(10, 9.5, 12), 2400), 3000); }
-  if (p.classList.contains("kpi")) kpiCount();
-  if (p.classList.contains("feed")) { renderFeed(); setTimeout(() => { const o = D.log[D.log.length - 1]; if (o) celebrate(o, true); }, 2400); }
-}
-$("cine").onclick = () => {
-  const on = !document.body.classList.contains("cinema");
-  document.body.classList.toggle("cinema", on); $("cine").textContent = on ? "■ Quitter le mode cinéma" : "▶ Mode cinéma";
-  clearInterval(cineT); clearZoom();
-  if (on) { cineStep = 0; warp = reduce ? 0 : 2; cineGo(); cineT = setInterval(cineGo, 6000); } else scrollTo({ top: 0, behavior: "smooth" });
+// Lecture automatique (pour filmer)
+let autoT = null;
+$("auto").onclick = () => {
+  if (autoT) { stopAuto(); return; }
+  document.body.classList.add("film"); $("auto").classList.add("on"); $("auto").textContent = "■";
+  goTo(0, false); let i = 0, t0 = performance.now();
+  autoT = (function run(now) {
+    const per = 7000, k = (now - t0) / per; i = Math.floor(k);
+    if (i >= chs.length) { stopAuto(); return; }
+    const c = chs[i], frac = k - i, ease = frac < .5 ? 2 * frac * frac : 1 - Math.pow(-2 * frac + 2, 2) / 2;
+    scrollTo(0, c.offsetTop + (c.offsetHeight - innerHeight) * Math.min(1, ease * 1.05));
+    if (i === chs.length - 1 && frac > .4 && !run.done) { run.done = true; replay(); }
+    autoT = requestAnimationFrame(run);
+  })(t0) || autoT;
 };
-addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("cinema")) $("cine").click(); });
+function stopAuto() { cancelAnimationFrame(autoT); autoT = null; document.body.classList.remove("film"); $("auto").classList.remove("on"); $("auto").textContent = "▶"; }
+addEventListener("keydown", (e) => { if (e.key === "Escape" && autoT) stopAuto(); if (e.key === "ArrowRight") goTo(chState().idx + 1); if (e.key === "ArrowLeft") goTo(chState().idx - 1); });
 
-// ================= Démarrage =================
-renderHead(); renderFeed(); findPeak(); renderRegions(); renderKpis();
-if (has3D) { buildGlobe(); buildCity(); }
-else ["globeBox", "cityBox"].forEach((id) => $(id).innerHTML = '<p style="padding:20px;color:#9a96bf;font:400 12px Sora,sans-serif">La vue 3D n\'a pas pu se charger sur cet appareil.</p>');
-setOdo($("total"), fmt(Math.floor(D.total)).replace(/\d/g, "0"));
-// entrée en scène
-document.querySelectorAll(".panel").forEach((p, i) => { p.style.transitionDelay = (120 + i * 90) + "ms"; });
-requestAnimationFrame(() => requestAnimationFrame(() => {
-  document.documentElement.classList.remove("intro");
-  setTimeout(() => { heroCount(false); kpiCount(); animChart(); document.querySelectorAll(".panel").forEach((p) => p.style.transitionDelay = ""); }, 500);
-}));
-requestAnimationFrame(loop);
+// ---------------- Scène WebGL ----------------
+const has3D = typeof THREE !== "undefined";
+let R, S, CAM, stars, coin, coin2, globe, gGrp, arcs = {}, city, towers = [], focusReg = null, pulses = [], flight = null;
+const ll = (lat, lon, r) => { const ph = (90 - lat) * Math.PI / 180, th = (lon + 180) * Math.PI / 180; return new THREE.Vector3(-r * Math.sin(ph) * Math.cos(th), r * Math.cos(ph), r * Math.sin(ph) * Math.sin(th)); };
+const glowTex = (hex) => { const c = document.createElement("canvas"); c.width = c.height = 128; const g = c.getContext("2d"), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64); gr.addColorStop(0, hex); gr.addColorStop(.25, hex + "99"); gr.addColorStop(1, hex + "00"); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); };
+const PLACES = { EUW: [48.8, 2.3], EUNE: [52.2, 21.0], NA: [41.9, -87.6], BR: [-23.5, -46.6], LAS: [-33.4, -70.6], LAN: [19.4, -99.1], ME: [25.2, 55.3] };
+// position caméra / cible pour chaque chapitre
+const KEYS = [
+  { p: [0, 0, 10], l: [3, 0, -6] },
+  { p: [0, 3, -22], l: [0, 0, -44] },
+  { p: [-6, 2, -40], l: [-3, 0, -62] },
+  { p: [-12, 8, -102], l: [-8, -2, -124] },
+  { p: [0, 0, -148], l: [0, 0, -175] },
+  { p: [4, 2, -178], l: [0, 0, -200] },
+  { p: [-6, 1, -200], l: [-3, 0, -216] },
+  { p: [0, 0, -236], l: [0, 0, -320] },
+];
+function makeCoin(size) {
+  const c = document.createElement("canvas"); c.width = c.height = 512; const g = c.getContext("2d");
+  const gr = g.createRadialGradient(200, 180, 30, 256, 256, 260); gr.addColorStop(0, "#fff3c4"); gr.addColorStop(.45, "#ffc861"); gr.addColorStop(1, "#b5651d");
+  g.fillStyle = gr; g.fillRect(0, 0, 512, 512);
+  g.strokeStyle = "rgba(90,40,0,.55)"; g.lineWidth = 14; g.beginPath(); g.arc(256, 256, 210, 0, 7); g.stroke();
+  for (let i = 0; i < 60; i++) { const a = i / 60 * Math.PI * 2; g.fillStyle = "rgba(90,40,0,.35)"; g.fillRect(256 + Math.cos(a) * 228 - 3, 256 + Math.sin(a) * 228 - 3, 6, 6); }
+  g.font = "900 260px Unbounded, Arial Black, sans-serif"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillStyle = "rgba(90,40,0,.75)"; g.fillText("E", 262, 272); g.fillStyle = "#fff6d8"; g.fillText("E", 256, 264);
+  const face = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(c), metalness: .85, roughness: .28, emissive: 0x442200, emissiveIntensity: .35 });
+  const edge = new THREE.MeshStandardMaterial({ color: 0xd8902a, metalness: .9, roughness: .3 });
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(size, size, size * .16, 96), [edge, face, face]);
+  m.rotation.x = Math.PI / 2; const grp = new THREE.Group(); grp.add(m);
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex("#ffb347"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: .65 })); halo.scale.set(size * 5, size * 5, 1); grp.add(halo);
+  return grp;
+}
+function initGL() {
+  R = new THREE.WebGLRenderer({ canvas: $("gl"), antialias: true, preserveDrawingBuffer: true }); R.setPixelRatio(Math.min(2, devicePixelRatio)); R.setClearColor(0x04040b, 1);
+  S = new THREE.Scene(); S.fog = new THREE.FogExp2(0x04040b, .006);
+  CAM = new THREE.PerspectiveCamera(55, innerWidth / innerHeight, .1, 900); CAM.position.set(...KEYS[0].p);
+  S.add(new THREE.AmbientLight(0x6a5acd, .9)); const key = new THREE.DirectionalLight(0xffffff, 1.1); key.position.set(5, 8, 10); S.add(key);
+  const rim = new THREE.PointLight(0xff4fb4, 2.2, 60); rim.position.set(-6, 3, -4); S.add(rim); S.userData.rim = rim;
+  // étoiles le long du trajet
+  const N = 9000, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), pal = [[1,1,1],[.6,.85,1],[1,.8,.55],[.85,.65,1],[1,.5,.8]];
+  for (let i = 0; i < N; i++) { const z = 30 - Math.random() * 360, r = 18 + Math.random() * 120, a = Math.random() * Math.PI * 2; pos.set([Math.cos(a) * r, Math.sin(a) * r * .7, z], i * 3); const p = pal[Math.random() * pal.length | 0], k = .4 + Math.random() * .6; col.set([p[0] * k, p[1] * k, p[2] * k], i * 3); }
+  const sg = new THREE.BufferGeometry(); sg.setAttribute("position", new THREE.BufferAttribute(pos, 3)); sg.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  stars = new THREE.Points(sg, new THREE.PointsMaterial({ size: .5, map: glowTex("#ffffff"), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); S.add(stars);
+  // nébuleuses
+  [["#8a6bff", -30, 10, -40, 90], ["#ff4fb4", 35, -12, -90, 80], ["#4fe3ff", -25, -8, -140, 100], ["#ffc861", 30, 15, -200, 70], ["#8a6bff", 0, 0, -290, 160]].forEach(([h, x, y, z, s]) => {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex(h), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: .28 })); sp.position.set(x, y, z); sp.scale.set(s, s, 1); S.add(sp); });
+  // pièces
+  coin = makeCoin(2.4); coin.position.set(5.5, -.2, -6); S.add(coin);
+  coin2 = makeCoin(4.2); coin2.position.set(5, 0, -216); S.add(coin2);
+  // globe
+  globe = new THREE.Group(); globe.position.set(7, 0, -62); S.add(globe); gGrp = new THREE.Group(); globe.add(gGrp);
+  const GR = 7.5, M = 5200, gp = new Float32Array(M * 3);
+  for (let i = 0; i < M; i++) { const y = 1 - (i / (M - 1)) * 2, rr = Math.sqrt(1 - y * y), th = i * Math.PI * (3 - Math.sqrt(5)); gp.set([Math.cos(th) * rr * GR, y * GR, Math.sin(th) * rr * GR], i * 3); }
+  const gg = new THREE.BufferGeometry(); gg.setAttribute("position", new THREE.BufferAttribute(gp, 3));
+  gGrp.add(new THREE.Points(gg, new THREE.PointsMaterial({ size: .09, color: 0x8fdcff, transparent: true, opacity: .6 })));
+  gGrp.add(new THREE.Mesh(new THREE.SphereGeometry(GR * .985, 64, 64), new THREE.MeshBasicMaterial({ color: 0x0a0920, transparent: true, opacity: .88 })));
+  const gm = new THREE.LineBasicMaterial({ color: 0x8a6bff, transparent: true, opacity: .2 });
+  for (let la = -60; la <= 60; la += 30) { const pts = []; for (let lo = 0; lo <= 360; lo += 4) pts.push(ll(la, lo, GR * 1.003)); gGrp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gm)); }
+  for (let lo = 0; lo < 360; lo += 30) { const pts = []; for (let la = -90; la <= 90; la += 4) pts.push(ll(la, lo, GR * 1.003)); gGrp.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gm)); }
+  const atm = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex("#4fe3ff"), transparent: true, opacity: .35, depthWrite: false, blending: THREE.AdditiveBlending })); atm.scale.set(GR * 3.3, GR * 3.3, 1); globe.add(atm);
+  [[GR * 1.4, .4, .3], [GR * 1.65, -.5, -.2]].forEach(([rad, a, b], i) => { const ring = new THREE.Mesh(new THREE.RingGeometry(rad, rad + .04, 160), new THREE.MeshBasicMaterial({ color: i ? 0x4fe3ff : 0xff4fb4, transparent: true, opacity: .35, side: THREE.DoubleSide })); ring.rotation.set(Math.PI / 2 + a, b, 0); globe.add(ring);
+    const sat = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex("#ffc861"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); sat.scale.set(1.2, 1.2, 1); ring.add(sat); ring.userData = { sat, rad }; (globe.userData.rings = globe.userData.rings || []).push(ring); });
+  const home = ll(46.8, 8.2, GR), rm = Math.max(...Object.values(D.reg));
+  const hm = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex("#ffffff"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); hm.position.copy(home); hm.scale.set(1.3, 1.3, 1); gGrp.add(hm);
+  Object.entries(PLACES).forEach(([k, [la, lo]]) => { if (!D.reg[k]) return; const pt = ll(la, lo, GR), w = D.reg[k] / rm;
+    const colm = new THREE.Mesh(new THREE.CylinderGeometry(.08 + .1 * w, .08 + .1 * w, .5 + 2.2 * w, 16), new THREE.MeshBasicMaterial({ color: 0xffc861 }));
+    colm.position.copy(pt.clone().multiplyScalar(1 + (.25 + 1.1 * w) / GR)); colm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), pt.clone().normalize()); gGrp.add(colm);
+    const gl = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex("#ff4fb4"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); gl.position.copy(pt); gl.scale.set(1.5 + 2.4 * w, 1.5 + 2.4 * w, 1); gl.userData.b = 1.5 + 2.4 * w; gGrp.add(gl);
+    const mid = home.clone().add(pt).multiplyScalar(.5).normalize().multiplyScalar(GR * (1.1 + home.distanceTo(pt) / GR * .25));
+    const curve = new THREE.QuadraticBezierCurve3(home, mid, pt), line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curve.getPoints(90)), new THREE.LineBasicMaterial({ color: 0xff4fb4, transparent: true, opacity: .5 + .5 * w, blending: THREE.AdditiveBlending }));
+    gGrp.add(line); arcs[k] = { line, gl, curve, pt, off: Math.random() }; });
+  gGrp.rotation.x = .35;
+  // ville-calendrier
+  city = new THREE.Group(); city.position.set(0, -5, -124); S.add(city);
+  const s = D.series, first = new Date(s[0][0] + "T12:00:00"), mon0 = new Date(first); mon0.setDate(first.getDate() - ((first.getDay() + 6) % 7));
+  const maxV = Math.max(...s.map((p) => p[1])), weeks = Math.ceil((new Date(s[s.length - 1][0] + "T12:00:00") - mon0) / 6048e5) + 1, U = 2.4;
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(7 * U + 4, weeks * U + 4), new THREE.MeshStandardMaterial({ color: 0x0c0a22, metalness: .4, roughness: .6, transparent: true, opacity: .92 })); fl.rotation.x = -Math.PI / 2; city.add(fl);
+  const grid = new THREE.GridHelper(Math.max(7, weeks) * U + 4, Math.max(7, weeks) + 2, 0x8a6bff, 0x2a2450); grid.position.y = .02; grid.material.transparent = true; grid.material.opacity = .4; city.add(grid);
+  s.forEach((p, i) => { const d = new Date(p[0] + "T12:00:00"), wd = (d.getDay() + 6) % 7, wk = Math.floor((d - mon0) / 6048e5), k = p[1] / maxV, last = i === s.length - 1;
+    const c = last ? new THREE.Color(0xff4fb4) : new THREE.Color(0x4fe3ff).lerp(new THREE.Color(0x8a6bff), Math.min(1, k * 1.6)).lerp(new THREE.Color(0xffc861), Math.max(0, k - .55) * 2.2);
+    const m = new THREE.Mesh(new THREE.BoxGeometry(U * .78, 1, U * .78), new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: last ? .9 : .35, metalness: .35, roughness: .3, transparent: true, opacity: .93 }));
+    m.position.set((wd - 3) * U, 0, (wk - (weeks - 1) / 2) * U); m.userData = { p, h: .3 + k * 11, i, last }; m.add(new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: .22 }))); city.add(m); towers.push(m); });
+  const cl = new THREE.PointLight(0xff4fb4, 3, 60); cl.position.set(0, 14, 0); city.add(cl); city.userData.light = cl;
+  // vortex des heures
+  const vg = new THREE.BufferGeometry(), VN = 2600, vp = new Float32Array(VN * 3), vc = new Float32Array(VN * 3);
+  for (let i = 0; i < VN; i++) { const a = Math.random() * Math.PI * 2, r = 2 + Math.pow(Math.random(), .6) * 16; vp.set([Math.cos(a) * r, (Math.random() - .5) * 2, Math.sin(a) * r], i * 3); const h = new THREE.Color().setHSL(.75 + r / 60, 1, .65); vc.set([h.r, h.g, h.b], i * 3); }
+  vg.setAttribute("position", new THREE.BufferAttribute(vp, 3)); vg.setAttribute("color", new THREE.BufferAttribute(vc, 3));
+  const vortex = new THREE.Points(vg, new THREE.PointsMaterial({ size: .25, map: glowTex("#ffffff"), vertexColors: true, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); vortex.position.set(0, -2, -200); vortex.rotation.x = .5; S.add(vortex); S.userData.vortex = vortex;
+  // survol des tours
+  const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+  addEventListener("mousemove", (e) => { mouse.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); S.userData.mouse = { x: mouse.x, y: mouse.y };
+    if (chState().idx !== 3) { towers.forEach((t) => (t.userData.hover = false)); return; }
+    ray.setFromCamera(mouse, CAM); const hit = ray.intersectObjects(towers)[0]; towers.forEach((t) => (t.userData.hover = t === (hit && hit.object)));
+    if (hit) { const p = hit.object.userData.p; showTip(e.clientX, e.clientY, `${JOURS[(new Date(p[0] + "T12:00:00").getDay() + 6) % 7]} ${dayLabel(p[0])}<small>${fmt(p[1])} $ · ${p[4]} comptes</small>`); } else hideTip(); });
+  addEventListener("resize", () => { R.setSize(innerWidth, innerHeight, false); CAM.aspect = innerWidth / innerHeight; CAM.updateProjectionMatrix(); });
+  R.setSize(innerWidth, innerHeight, false);
+}
+function flyReg(k) { if (!PLACES[k] || !globe) return; focusReg = k; const [la, lo] = PLACES[k]; const target = gGrp.rotation.y; flight = { k, from: gGrp.rotation.y, to: -((lo + 180) * Math.PI / 180) + Math.PI / 2 + Math.round(gGrp.rotation.y / (2 * Math.PI)) * 2 * Math.PI, s: performance.now() }; setTimeout(() => (focusReg = null), 2600); pulse(k); }
+function pulse(k) {
+  if (!gGrp) return; const a = arcs[k] || Object.values(arcs)[Math.random() * Object.keys(arcs).length | 0]; if (!a) return;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex("#ffc861"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); s.scale.set(2, 2, 1); gGrp.add(s);
+  const ring = new THREE.Mesh(new THREE.RingGeometry(.2, .35, 64), new THREE.MeshBasicMaterial({ color: 0xffc861, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+  ring.position.copy(a.pt.clone().multiplyScalar(1.01)); ring.lookAt(a.pt.clone().multiplyScalar(2)); gGrp.add(ring); pulses.push({ a, s, ring, t0: performance.now() });
+}
+const cur = has3D ? { p: new THREE.Vector3(), l: new THREE.Vector3() } : null;
+function frame(now) {
+  const { idx, local } = chState(), y = scrollY;
+  // progression globale entre chapitres
+  let gi = 0, gf = 0;
+  for (let i = 0; i < chs.length; i++) { const top = chs[i].offsetTop, h = chs[i].offsetHeight - innerHeight; if (y >= top) { gi = i; gf = Math.max(0, Math.min(1, (y - top) / Math.max(1, h))); } }
+  const tr = Math.max(0, (gf - .7) / .3), e = tr * tr * (3 - 2 * tr), A = KEYS[gi], B = KEYS[Math.min(KEYS.length - 1, gi + 1)];
+  const tp = new THREE.Vector3(...A.p).lerp(new THREE.Vector3(...B.p), e), tl = new THREE.Vector3(...A.l).lerp(new THREE.Vector3(...B.l), e);
+  const m = S.userData.mouse || { x: 0, y: 0 };
+  tp.x += m.x * 1.2; tp.y += m.y * .8;
+  if (gi === 3) { const a = gf * 1.4 - .3; tp.add(new THREE.Vector3(Math.sin(a) * 6, 0, Math.cos(a) * 3 - 3).multiplyScalar(1 - e)); }
+  if (!cur.init) { cur.p.copy(tp); cur.l.copy(tl); cur.init = true; }
+  const k = reduce ? 1 : .06; cur.p.lerp(tp, k); cur.l.lerp(tl, k); CAM.position.copy(cur.p); CAM.lookAt(cur.l);
+  // pièces
+  const t = now / 1000;
+  coin.rotation.y = t * .8 + gf * 4; coin.rotation.x = Math.sin(t * .7) * .25; coin.position.y = Math.sin(t * 1.2) * .35 - .2;
+  coin2.rotation.y = -t * .6; coin2.position.y = Math.sin(t) * .5;
+  stars.rotation.z = t * .01;
+  // globe
+  if (flight) { const k2 = Math.min(1, (now - flight.s) / 1600), ee = 1 - Math.pow(1 - k2, 3); gGrp.rotation.y = flight.from + (flight.to - flight.from) * ee; if (k2 >= 1) flight = null; }
+  else if (!reduce) gGrp.rotation.y += .0025;
+  (globe.userData.rings || []).forEach((r, i) => { const a = t * (.5 + i * .2) + i * 2; r.userData.sat.position.set(Math.cos(a) * r.userData.rad, Math.sin(a) * r.userData.rad, 0); });
+  Object.entries(arcs).forEach(([kk, a], i) => { a.line.geometry.setDrawRange(0, focusReg && focusReg !== kk ? 0 : Math.floor(91 * Math.min(1, (t / 2.4 + a.off) % 1.5))); const s = a.gl.userData.b * (focusReg === kk ? 1.9 : 1 + .25 * Math.sin(t * 3 + i)); a.gl.scale.set(s, s, 1); });
+  pulses = pulses.filter((p) => { const k3 = (now - p.t0) / 1700; if (k3 < .6) p.s.position.copy(p.a.curve.getPoint(k3 / .6)); else { p.s.visible = false; const r = 1 + (k3 - .6) * 16; p.ring.scale.set(r, r, r); p.ring.material.opacity = Math.max(0, 1 - (k3 - .6) * 2.5); }
+    if (k3 >= 1) { gGrp.remove(p.s); gGrp.remove(p.ring); return false; } return true; });
+  // ville : les tours poussent avec le scroll du chapitre 4
+  const grow = reduce ? 1 : Math.min(1, local[3] * 1.6 + (idx > 3 ? 1 : 0));
+  towers.forEach((tw) => { const d = Math.max(0, Math.min(1, grow * 1.6 - tw.userData.i / towers.length * .6)), h = Math.max(.01, tw.userData.h * (1 - Math.pow(1 - d, 3)) * (tw.userData.last ? 1 + .05 * Math.sin(t * 4) : 1) * (tw.userData.bump ? 1 + .3 * Math.max(0, 1 - (now - tw.userData.bump) / 900) : 1));
+    tw.scale.y = h; tw.position.y = h / 2; tw.material.emissiveIntensity = tw.userData.hover ? 1.3 : tw.userData.last ? .8 + .3 * Math.sin(t * 3) : .35; });
+  city.userData.light.position.set(Math.cos(t * .6) * 14, 14, Math.sin(t * .6) * 14);
+  S.userData.vortex.rotation.y = t * .15;
+  S.userData.rim.position.set(Math.cos(t * .4) * 10 + cur.p.x, 4, cur.p.z - 10);
+  R.render(S, CAM);
+  // barre du lecteur
+  segBtns.forEach((b, i) => (b.firstElementChild.style.width = (i < gi ? 100 : i === gi ? gf * 100 : 0) + "%"));
+  const lbl = String(idx + 1).padStart(2, "0") + " · <em>" + chs[idx].dataset.t + "</em>"; if ($("trackT")._l !== lbl) { $("trackT").innerHTML = lbl; $("trackT")._l = lbl; }
+  document.body.classList.toggle("nofeed", idx === 4 || idx === 5);
+  drawChart(local[1], now); if (idx >= 4 && idx <= 6) drawClock(now);
+  requestAnimationFrame(frame);
+}
+
+// ---------------- Graphique (se dessine avec le scroll) ----------------
+const chart = $("chart"), cg = chart.getContext("2d");
+function fitC(c) { const r = c.getBoundingClientRect(), w = Math.round(r.width * devicePixelRatio), h = Math.round(r.height * devicePixelRatio); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return r; }
+function drawChart(prog, now) {
+  if (!chart.offsetParent) return;
+  const r = fitC(chart), W = r.width, H = r.height, g = cg; g.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); g.clearRect(0, 0, W, H);
+  const s = D.series, vals = s.map((p) => p[3]), L = 52, Rr = 18, T = 26, B = 28, w = W - L - Rr, h = H - T - B, mn = Math.min(0, ...vals), mx = Math.max(...vals) * 1.1;
+  const X = (i) => L + i / (s.length - 1) * w, Y = (v) => T + h - (v - mn) / (mx - mn) * h;
+  g.font = "400 10.5px JetBrains Mono, monospace"; g.fillStyle = "#9d98c4"; g.textAlign = "right"; g.textBaseline = "middle";
+  for (let v = 0; v <= mx; v += 1000) { g.strokeStyle = "rgba(170,160,255,.08)"; g.beginPath(); g.moveTo(L, Y(v)); g.lineTo(W - Rr, Y(v)); g.stroke(); g.fillText(fmt(v), L - 10, Y(v)); }
+  g.textAlign = "center"; g.textBaseline = "top"; const ev = Math.ceil(s.length / 7); s.forEach((p, i) => { if (i % ev === 0 || i === s.length - 1) g.fillText(dayLabel(p[0]), X(i), H - B + 9); });
+  const k = reduce ? 1 : Math.min(1, prog * 1.35 + .02), n = k * (s.length - 1), ni = Math.floor(n), f = n - ni;
+  const pts = []; for (let i = 0; i <= ni; i++) pts.push([X(i), Y(vals[i])]); if (ni < s.length - 1) pts.push([X(ni) + (X(ni + 1) - X(ni)) * f, Y(vals[ni]) + (Y(vals[ni + 1]) - Y(vals[ni])) * f]);
+  const head = pts[pts.length - 1];
+  const fillG = g.createLinearGradient(0, T, 0, T + h); fillG.addColorStop(0, "rgba(255,79,180,.42)"); fillG.addColorStop(1, "rgba(138,107,255,0)");
+  g.beginPath(); g.moveTo(pts[0][0], Y(mn)); pts.forEach((p) => g.lineTo(p[0], p[1])); g.lineTo(head[0], Y(mn)); g.closePath(); g.fillStyle = fillG; g.fill();
+  const lg = g.createLinearGradient(L, 0, W - Rr, 0); lg.addColorStop(0, "#8a6bff"); lg.addColorStop(.6, "#ff4fb4"); lg.addColorStop(1, "#ffc861");
+  g.shadowColor = "rgba(255,79,180,.9)"; g.shadowBlur = 18; g.strokeStyle = lg; g.lineWidth = 3.5; g.lineJoin = "round"; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); g.shadowBlur = 0;
+  g.font = "700 11px Unbounded, sans-serif";
+  for (let m2 = 1000; m2 <= mx; m2 += 1000) { const i = vals.findIndex((v) => v >= m2); if (i >= 0 && i <= n) { const age = Math.min(1, (n - i) / 1.5), sc = 1 + (1 - age) * .6;
+    g.fillStyle = "#ffc861"; g.beginPath(); g.arc(X(i), Y(vals[i]), 4 * sc, 0, 7); g.fill(); g.globalAlpha = age; g.fillText(fmt(m2 / 1000) + "K", X(i), Y(vals[i]) - 24); g.globalAlpha = 1; } }
+  const pr = 8 + (reduce ? 0 : 8 * ((now / 900) % 1));
+  g.strokeStyle = `rgba(255,200,97,${1 - ((now / 900) % 1)})`; g.lineWidth = 2; g.beginPath(); g.arc(head[0], head[1], pr, 0, 7); g.stroke();
+  for (let q = 6; q >= 1; q--) { g.fillStyle = `rgba(255,${150 + q * 15},${200 - q * 20},${.07 * q})`; g.beginPath(); g.arc(head[0], head[1], 3 + q * 3, 0, 7); g.fill(); }
+  g.fillStyle = "#fff"; g.beginPath(); g.arc(head[0], head[1], 4, 0, 7); g.fill();
+  const hv = vals[Math.min(s.length - 1, Math.round(n))]; g.font = "800 13px Unbounded, sans-serif"; g.textAlign = head[0] > W - 120 ? "right" : "left"; g.fillStyle = "#fff"; g.fillText(fmt(hv) + " $", head[0] + (g.textAlign === "left" ? 14 : -14), head[1] - 30);
+  chart._g = { L, w, s };
+}
+chart.addEventListener("mousemove", (e) => { if (!chart._g) return; const r = chart.getBoundingClientRect(), { L, w, s } = chart._g, i = Math.max(0, Math.min(s.length - 1, Math.round((e.clientX - r.left - L) / w * (s.length - 1)))), p = s[i];
+  showTip(e.clientX, e.clientY, `${dayLabel(p[0])}<small>ventes ${fmt(p[1])} $ · ${p[4]} comptes${p[2] ? " · achat " + fmt(p[2]) + " $" : ""} · cumul ${fmt(p[3])} $</small>`); });
+chart.addEventListener("mouseleave", hideTip);
+
+// ---------------- Horloge radiale des heures ----------------
+const clk = $("clockc"), kg = clk.getContext("2d");
+function drawClock(now) {
+  if (!clk.offsetParent) return;
+  const r = fitC(clk), W = r.width, H = r.height, cx = W / 2, cy = H / 2, R0 = Math.min(W, H) * .14, R1 = Math.min(W, H) * .47, mx = Math.max(...D.heat.flat());
+  kg.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); kg.clearRect(0, 0, W, H);
+  const rot = reduce ? 0 : now / 30000;
+  for (let d = 0; d < 7; d++) { const r0 = R0 + (R1 - R0) * d / 7, r1 = R0 + (R1 - R0) * (d + 1) / 7 - 2;
+    for (let h = 0; h < 24; h++) { const v = D.heat[d][h] / mx, wave = reduce ? 0 : .25 * Math.sin(now / 500 - h * .4 - d * .7) * v, k = Math.min(1, v + wave);
+      const a0 = h / 24 * Math.PI * 2 - Math.PI / 2 + rot + .01, a1 = (h + 1) / 24 * Math.PI * 2 - Math.PI / 2 + rot - .01;
+      kg.beginPath(); kg.arc(cx, cy, r1, a0, a1); kg.arc(cx, cy, r0, a1, a0, true); kg.closePath();
+      kg.fillStyle = k < .5 ? `rgba(138,107,255,${.08 + k * 1.3})` : `rgba(255,${Math.round(79 + (k - .5) * 240)},${Math.round(180 - (k - .5) * 170)},${.55 + k * .45})`;
+      if (d === peak[0] && h === peak[1]) { kg.shadowColor = "#ffc861"; kg.shadowBlur = 24; } kg.fill(); kg.shadowBlur = 0; } }
+  kg.fillStyle = "#9d98c4"; kg.font = "600 11px JetBrains Mono, monospace"; kg.textAlign = "center"; kg.textBaseline = "middle";
+  [0, 6, 12, 18].forEach((h) => { const a = h / 24 * Math.PI * 2 - Math.PI / 2 + rot; kg.fillText(h + " h", cx + Math.cos(a) * (R1 + 16), cy + Math.sin(a) * (R1 + 16)); });
+  kg.font = "900 26px Unbounded, sans-serif"; kg.fillStyle = "#fff"; kg.fillText(peak[1] + "h", cx, cy - 6); kg.font = "500 10px JetBrains Mono, monospace"; kg.fillStyle = "#ffc861"; kg.fillText("PIC", cx, cy + 16);
+}
+clk.addEventListener("mousemove", (e) => { const r = clk.getBoundingClientRect(), x = e.clientX - r.left - r.width / 2, y = e.clientY - r.top - r.height / 2, R0 = Math.min(r.width, r.height) * .14, R1 = Math.min(r.width, r.height) * .47, dist = Math.hypot(x, y);
+  if (dist < R0 || dist > R1) return hideTip(); const rot = reduce ? 0 : performance.now() / 30000; let a = Math.atan2(y, x) + Math.PI / 2 - rot; a = ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  const h = Math.floor(a / (2 * Math.PI) * 24), d = Math.floor((dist - R0) / (R1 - R0) * 7); showTip(e.clientX, e.clientY, `${JOURS[d]} · ${h} h<small>${D.heat[d][h]} comptes vendus</small>`); });
+clk.addEventListener("mouseleave", hideTip);
+
+// ---------------- Coffre physique (Matter.js) ----------------
+let jar = null;
+function startJar() {
+  if (jar || typeof Matter === "undefined") return;
+  const { Engine, Bodies, Composite, Mouse, MouseConstraint, Body } = Matter, cv = $("jar"), r = fitC(cv), W = r.width, H = r.height;
+  const eng = Engine.create(); eng.gravity.y = 1.1;
+  const wall = { isStatic: true, render: { visible: false } }, th = 40, jw = W * .78, jx = (W - jw) / 2, jtop = H * .12, jbot = H * .95;
+  Composite.add(eng.world, [Bodies.rectangle(W / 2, jbot + th / 2, jw + th * 2, th, wall), Bodies.rectangle(jx - th / 2, (jtop + jbot) / 2, th, jbot - jtop, wall), Bodies.rectangle(jx + jw + th / 2, (jtop + jbot) / 2, th, jbot - jtop, wall)]);
+  const mouse = Mouse.create(cv); mouse.pixelRatio = 1; const mc = MouseConstraint.create(eng, { mouse, constraint: { stiffness: .2, render: { visible: false } } }); Composite.add(eng.world, mc);
+  cv.addEventListener("mousedown", () => { const bs = Composite.allBodies(eng.world).filter((b) => !b.isStatic); bs.forEach((b) => Body.applyForce(b, b.position, { x: (Math.random() - .5) * .02 * b.mass, y: -.03 * b.mass })); });
+  jar = { eng, W, H, jx, jw, jtop, jbot, coins: [], Bodies, Composite };
+  const todays = D.log.filter((o) => o.t.slice(0, 10) === D.date), extra = Math.max(0, D.comptes - todays.length);
+  const queue = [...Array(extra).fill({ p: 4.99 }), ...todays].slice(-140);
+  queue.forEach((o, i) => setTimeout(() => dropCoin(o, false), reduce ? 0 : i * 45));
+  let lastT = performance.now(), acc = 0;
+  (function step(now) { now = now || performance.now(); acc += Math.min(200, now - lastT); lastT = now; let n = 0; while (acc >= 1000 / 60 && n < 8) { Matter.Engine.update(eng, 1000 / 60); acc -= 1000 / 60; n++; } drawJar(); requestAnimationFrame(step); })();
+}
+function dropCoin(o, big) {
+  if (!jar) return; const p = +o.p, r = (p >= 9 ? 22 : p >= 4.9 ? 17 : 15) * (big ? 1.25 : 1);
+  const b = jar.Bodies.circle(jar.jx + jar.jw * (.2 + Math.random() * .6), -30, r, { restitution: .45, friction: .05, density: .002 });
+  b.userData = { p, r, born: performance.now(), big, hue: p >= 9 ? "#ff4fb4" : p >= 4.9 ? "#ffc861" : p >= 4.4 ? "#8a6bff" : "#4fe3ff" };
+  jar.Composite.add(jar.eng.world, b); jar.coins.push(b);
+}
+function drawJar() {
+  const cv = $("jar"), r = fitC(cv), g = cv.getContext("2d"), { W, H, jx, jw, jtop, jbot } = jar; g.setTransform(devicePixelRatio * r.width / W, 0, 0, devicePixelRatio * r.height / H, 0, 0); g.clearRect(0, 0, W, H);
+  // verre du coffre
+  g.strokeStyle = "rgba(79,227,255,.55)"; g.lineWidth = 3; g.shadowColor = "#4fe3ff"; g.shadowBlur = 18;
+  g.beginPath(); g.moveTo(jx, jtop); g.lineTo(jx, jbot - 24); g.quadraticCurveTo(jx, jbot, jx + 24, jbot); g.lineTo(jx + jw - 24, jbot); g.quadraticCurveTo(jx + jw, jbot, jx + jw, jbot - 24); g.lineTo(jx + jw, jtop); g.stroke(); g.shadowBlur = 0;
+  g.fillStyle = "rgba(79,227,255,.04)"; g.fillRect(jx, jtop, jw, jbot - jtop);
+  const now = performance.now();
+  jar.coins.forEach((b) => { const { r: rad, hue, born, big } = b.userData, x = b.position.x, y = b.position.y, age = (now - born) / 1000;
+    g.save(); g.translate(x, y); g.rotate(b.angle);
+    if (big && age < 4) { g.shadowColor = hue; g.shadowBlur = 30 * (1 - age / 4); }
+    const gr = g.createRadialGradient(-rad * .35, -rad * .35, rad * .1, 0, 0, rad); gr.addColorStop(0, "#fff8dc"); gr.addColorStop(.45, hue); gr.addColorStop(1, "rgba(0,0,0,.55)");
+    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rad, 0, 7); g.fill(); g.shadowBlur = 0;
+    g.strokeStyle = "rgba(255,255,255,.35)"; g.lineWidth = 1.2; g.beginPath(); g.arc(0, 0, rad * .78, 0, 7); g.stroke();
+    g.fillStyle = "rgba(20,10,0,.75)"; g.font = `900 ${rad * .8}px Unbounded, sans-serif`; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText("$", 0, 1); g.restore(); });
+  g.fillStyle = "rgba(244,241,255,.75)"; g.font = "600 12px JetBrains Mono, monospace"; g.textAlign = "center"; g.fillText(jar.coins.length + " pièces · " + fmt(D.jour) + " $", W / 2, jtop - 14);
+}
+
+// ---------------- Particules (pièces qui volent vers le compteur) ----------------
+const fx = $("fx"), fg = fx.getContext("2d"); let parts = [];
+const fxSize = () => { fx.width = innerWidth * devicePixelRatio; fx.height = innerHeight * devicePixelRatio; }; fxSize(); addEventListener("resize", fxSize);
+function burst(x, y, tx, ty, n = 50) { for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, sp = 3 + Math.random() * 8; parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 4, l: 0, m: 75 + Math.random() * 40, tx: tx + (Math.random() - .5) * 80, ty: ty + (Math.random() - .5) * 30, h: Math.random() < .65 ? 42 : 325, r: 2 + Math.random() * 3.5 }); } }
+(function fxl() { fg.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0); fg.clearRect(0, 0, innerWidth, innerHeight);
+  parts = parts.filter((p) => { p.l++; const k = p.l / p.m; if (k < .35) { p.vx *= .94; p.vy = p.vy * .94 + .18; } else { p.vx += (p.tx - p.x) * .013; p.vy += (p.ty - p.y) * .013; p.vx *= .86; p.vy *= .86; }
+    p.x += p.vx; p.y += p.vy; fg.fillStyle = `hsla(${p.h},100%,70%,${1 - Math.max(0, k - .8) * 5})`; fg.shadowColor = `hsl(${p.h},100%,60%)`; fg.shadowBlur = 14; fg.beginPath(); fg.arc(p.x, p.y, p.r, 0, 7); fg.fill(); return k < 1; });
+  fg.shadowBlur = 0; requestAnimationFrame(fxl); })();
+
+// ---------------- Arrivée des ventes, une par une ----------------
+let queue = [], playing = false;
+function enqueue(list) { queue.push(...list); if (!playing) playNext(); }
+function playNext() {
+  const o = queue.shift(); if (!o) { playing = false; return; } playing = true;
+  $("toastAmt").textContent = "+" + (+o.p).toFixed(2) + " $"; $("toastTxt").textContent = (o.replay ? "rejoué · " : "nouvelle vente · ") + o.r + " · " + o.t.slice(11, 16);
+  const t = $("toast"); t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 1500);
+  const od = $("odo").getBoundingClientRect();
+  if (!reduce) burst(innerWidth * (.3 + Math.random() * .4), innerHeight * .2, od.left + od.width * .8, od.top + od.height / 2);
+  setOdo(shown + net(+o.p));
+  dropCoin(o, true); pulse((o.r || "").split(" ")[0]);
+  const lastT = towers[towers.length - 1]; if (lastT) lastT.userData.bump = performance.now();
+  renderFeed(Math.min(5, (o.rank || 0) + 1));
+  setTimeout(playNext, reduce ? 300 : 1700);
+}
+function replay() { const last = D.log.slice(-5); setOdo(D.total - last.reduce((a, o) => a + net(+o.p), 0)); enqueue(last.map((o) => ({ ...o, replay: true }))); }
+$("replay").onclick = replay; $("replay2").onclick = replay;
+// ventes jamais vues sur cet appareil
+function unseenSales() { let last = null; try { last = localStorage.getItem("eldo_seen"); } catch (e) {} const list = last ? D.log.filter((o) => o.t > last) : D.log.slice(-4); return list.slice(-12); }
+function markSeen() { try { if (D.log.length) localStorage.setItem("eldo_seen", D.log[D.log.length - 1].t); } catch (e) {} }
+
+// ---------------- Données en direct (GitHub Pages) ----------------
+async function poll() {
+  try { const r = await fetch("stats.json?t=" + Date.now(), { cache: "no-store" }); if (!r.ok) throw 0; const s = await r.json(); if (typeof s.total !== "number") throw 0;
+    $("status").textContent = "LIVE"; $("status").className = "live";
+    const keys = new Set(D.log.map((o) => o.t + "|" + o.p)), log = (s.log || []).slice().sort((a, b) => a.t < b.t ? -1 : 1).map((x) => ({ t: x.t, p: x.p, r: x.r || "LoL", c: x.c || "Orbyn" })), fresh = log.filter((o) => !keys.has(o.t + "|" + o.p));
+    const before = D.total; Object.assign(D, { total: s.total, ventesTotal: s.ventesTotal ?? D.ventesTotal, comptesTotal: s.comptesTotal ?? D.comptesTotal, mois: s.mois, semaine: s.semaine, jour: s.jour, comptes: s.comptes, streak: s.streak, maj: s.maj || D.maj, date: s.date, log: log.slice(-120) });
+    if (Array.isArray(s.hist) && s.hist.length) D.series = s.hist.map((x) => x.slice()); if (s.heat) D.heat = s.heat; if (s.reg) D.reg = s.reg;
+    const last = D.series[D.series.length - 1]; if (last[0] === s.date) { last[1] = s.jour; last[4] = s.comptes; last[3] = s.total; } else D.series.push([s.date, s.jour, 0, s.total, s.comptes]);
+    fill(); if (fresh.length) { setOdo(before); enqueue(fresh); markSeen(); }
+  } catch (e) { /* page publiée sur Claude : données figées */ }
+}
+
+// ---------------- Démarrage ----------------
+fill();
+if (has3D) { try { initGL(); requestAnimationFrame(frame); } catch (e) { console.error(e); } }
+const unseen = unseenSales();
+setOdo(0); zeroOdo();
+setTimeout(() => { setOdo(D.total - unseen.reduce((a, o) => a + net(+o.p), 0)); }, 300);
+setTimeout(() => { enqueue(unseen); markSeen(); }, reduce ? 500 : 2600);
 poll(); setInterval(poll, 30000);
 </script>
