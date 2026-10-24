@@ -145,6 +145,45 @@ body.nofeed .feed { opacity: 0; transform: translateY(20px); pointer-events: non
 #tip small { display: block; font: 400 10.5px var(--f-mono); color: var(--muted); }
 body.film .hud, body.film .feed { opacity: .0; transition: opacity .8s; }
 body.film::after { content: ""; position: fixed; inset: 0; z-index: 55; pointer-events: none; box-shadow: inset 0 7vh 0 #000, inset 0 -7vh 0 #000; }
+
+/* ---- Film ---- */
+#film { position: fixed; inset: 0; z-index: 58; pointer-events: none; opacity: 0; transition: opacity .5s; perspective: 1100px; overflow: hidden; }
+body.filming #film { opacity: 1; }
+body.filming main, body.filming .hud, body.filming .feed { opacity: 0; pointer-events: none; transition: opacity .5s; }
+body.filming::after { content: ""; position: fixed; inset: 0; z-index: 59; pointer-events: none; box-shadow: inset 0 6vh 0 #000, inset 0 -6vh 0 #000; }
+body.filming { cursor: none; }
+body.filming .toast { opacity: 0; }
+.ft { position: absolute; left: var(--x, 50%); top: var(--y, 50%); transform: translate(-50%, -50%); white-space: nowrap; text-align: center; transform-style: preserve-3d;
+  animation: zin .75s cubic-bezier(.16,1,.3,1) both, drift var(--dd, 5s) linear both; }
+.ft.out { animation: zout .55s cubic-bezier(.7,0,.84,0) forwards; }
+.ft.k { font: 600 clamp(12px, 1.3vw, 18px) var(--f-mono); letter-spacing: .5em; color: var(--gold); text-shadow: 0 0 20px rgba(255,200,97,.6); }
+.ft.big { font: 900 clamp(70px, 13vw, 230px)/.9 var(--f-display); letter-spacing: -.04em; background: linear-gradient(100deg, #fff 10%, var(--gold) 40%, var(--rose) 70%, var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 50px rgba(255,79,180,.55)); font-variant-numeric: tabular-nums; }
+.ft.mid { font: 800 clamp(26px, 4vw, 64px)/1 var(--f-display); color: #fff; text-shadow: 0 0 30px rgba(138,107,255,.8); }
+.ft.sm { font: 400 clamp(14px, 1.5vw, 22px) var(--f-body); color: var(--muted); letter-spacing: .04em; }
+.ft .cur { display: inline-block; width: .08em; height: .9em; margin-left: .05em; background: var(--rose); vertical-align: -.1em; animation: blink .5s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes zin { from { opacity: 0; transform: translate(-50%, -50%) translateZ(-700px) rotateX(35deg) rotateZ(-6deg) scale(.5); filter: blur(16px); } }
+@keyframes zout { to { opacity: 0; transform: translate(-50%, -50%) translateZ(500px) scale(1.6) rotateX(-20deg); filter: blur(14px); } }
+@keyframes drift { from { translate: var(--fx, 0) var(--fy, 0); } to { translate: var(--tx, 0) var(--ty, 0); } }
+.fb { position: absolute; left: var(--x); top: var(--y); width: var(--s, 150px); height: var(--s, 150px); margin: calc(var(--s, 150px) / -2) 0 0 calc(var(--s, 150px) / -2); border-radius: 50%;
+  display: grid; place-items: center; text-align: center; padding: 10px; color: #fff;
+  background: radial-gradient(circle at 32% 28%, rgba(255,255,255,.55), rgba(255,255,255,.08) 22%, rgba(138,107,255,.25) 60%, rgba(255,79,180,.35));
+  border: 1.5px solid rgba(255,255,255,.35); box-shadow: inset 0 0 40px rgba(255,79,180,.35), 0 0 60px rgba(138,107,255,.45);
+  animation: bubin .9s cubic-bezier(.2,1.7,.3,1) both, floaty 2.4s ease-in-out infinite alternate; }
+.fb.out { animation: pop2 .45s ease-in forwards; }
+.fb b { display: block; font: 900 calc(var(--s, 150px) * .22) var(--f-display); line-height: 1; }
+.fb span { display: block; font: 600 calc(var(--s, 150px) * .09) var(--f-mono); letter-spacing: .12em; color: rgba(255,255,255,.8); margin-top: 4px; }
+@keyframes bubin { from { transform: scale(0) rotate(-40deg); opacity: 0; } }
+@keyframes floaty { to { translate: var(--fx2, 0px) -18px; } }
+@keyframes pop2 { 60% { transform: scale(1.25); opacity: 1; } to { transform: scale(1.6); opacity: 0; filter: blur(6px); } }
+.shock { position: absolute; left: var(--x, 50%); top: var(--y, 50%); width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; border: 4px solid var(--gold); box-shadow: 0 0 40px var(--gold); animation: shock 1s cubic-bezier(.16,1,.3,1) forwards; }
+@keyframes shock { to { transform: scale(60); opacity: 0; border-width: .3px; } }
+#flash { position: fixed; inset: 0; z-index: 61; background: #fff; opacity: 0; pointer-events: none; }
+#fchart { position: absolute; left: 6vw; right: 6vw; top: 30vh; height: 46vh; width: 88vw; }
+.fbadges { display: flex; gap: 2vw; }
+.fbadges i { font-style: normal; font-size: clamp(34px, 4.5vw, 70px); display: inline-block; animation: bubin .8s cubic-bezier(.2,1.8,.3,1) both; filter: drop-shadow(0 0 20px rgba(255,200,97,.8)); }
+.fxp { width: min(60vw, 760px); height: 14px; border-radius: 14px; background: rgba(255,255,255,.1); overflow: hidden; }
+.fxp i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold), var(--rose), var(--violet)); box-shadow: 0 0 30px var(--rose); transition: width 1.6s cubic-bezier(.16,1,.3,1); }
 @media (prefers-reduced-motion: reduce) { .reveal > *, .odo .d i, .reg .bar i, .xp i { transition: none !important; } .feed li, .scrollcue i::after { animation: none; } }
 </style>
 
@@ -157,7 +196,7 @@ body.film::after { content: ""; position: fixed; inset: 0; z-index: 55; pointer-
 <div class="hud">
   <div class="brand"><div class="logo">E</div><div><b>ELDORADO</b><small id="maj"></small></div></div>
   <div class="player">
-    <div class="btns"><button id="prev" aria-label="Chapitre précédent">◀</button><button id="auto" aria-label="Lecture automatique">▶</button><button id="next" aria-label="Chapitre suivant">▶▶</button></div>
+    <div class="btns"><button id="prev" aria-label="Chapitre précédent">◀</button><button id="auto" aria-label="Lancer le film">▶ FILM</button><button id="next" aria-label="Chapitre suivant">▶▶</button></div>
     <div class="track"><div class="t" id="trackT">01 · <em>Le total</em></div><div class="segs" id="segs"></div></div>
     <div class="tools"><button id="replay" title="Rejouer les dernières ventes">↻</button></div>
   </div>
@@ -243,6 +282,7 @@ body.film::after { content: ""; position: fixed; inset: 0; z-index: 55; pointer-
   </section>
 </main>
 
+<div id="film"><canvas id="fchart"></canvas></div><div id="flash"></div>
 <aside class="feed"><h3><span>EN DIRECT</span><em id="feedN" style="font-style:normal"></em></h3><ul id="feed"></ul></aside>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -331,23 +371,9 @@ function onReveal(r) {
   if (r.closest(".ch") === chs[4]) startJar();
 }
 
-// Lecture automatique (pour filmer)
-let autoT = null;
-$("auto").onclick = () => {
-  if (autoT) { stopAuto(); return; }
-  document.body.classList.add("film"); $("auto").classList.add("on"); $("auto").textContent = "■";
-  goTo(0, false); let i = 0, t0 = performance.now();
-  autoT = (function run(now) {
-    const per = 7000, k = (now - t0) / per; i = Math.floor(k);
-    if (i >= chs.length) { stopAuto(); return; }
-    const c = chs[i], frac = k - i, ease = frac < .5 ? 2 * frac * frac : 1 - Math.pow(-2 * frac + 2, 2) / 2;
-    scrollTo(0, c.offsetTop + (c.offsetHeight - innerHeight) * Math.min(1, ease * 1.05));
-    if (i === chs.length - 1 && frac > .4 && !run.done) { run.done = true; replay(); }
-    autoT = requestAnimationFrame(run);
-  })(t0) || autoT;
-};
-function stopAuto() { cancelAnimationFrame(autoT); autoT = null; document.body.classList.remove("film"); $("auto").classList.remove("on"); $("auto").textContent = "▶"; }
-addEventListener("keydown", (e) => { if (e.key === "Escape" && autoT) stopAuto(); if (e.key === "ArrowRight") goTo(chState().idx + 1); if (e.key === "ArrowLeft") goTo(chState().idx - 1); });
+// Lecture automatique : le film de 38 s
+$("auto").onclick = () => (film.on ? stopFilm() : startFilm());
+addEventListener("keydown", (e) => { if (e.key === "Escape" && film.on) stopFilm(); if (e.key.toLowerCase() === "f" && !film.on) startFilm(); if (e.key === "ArrowRight") goTo(chState().idx + 1); if (e.key === "ArrowLeft") goTo(chState().idx - 1); });
 
 // ---------------- Scène WebGL ----------------
 const has3D = typeof THREE !== "undefined";
@@ -464,7 +490,11 @@ function frame(now) {
   tp.x += m.x * 1.2; tp.y += m.y * .8;
   if (gi === 3) { const a = gf * 1.4 - .3; tp.add(new THREE.Vector3(Math.sin(a) * 6, 0, Math.cos(a) * 3 - 3).multiplyScalar(1 - e)); }
   if (!cur.init) { cur.p.copy(tp); cur.l.copy(tl); cur.init = true; }
-  const k = reduce ? 1 : .06; cur.p.lerp(tp, k); cur.l.lerp(tl, k); CAM.position.copy(cur.p); CAM.lookAt(cur.l);
+  let k = reduce ? 1 : .06;
+  if (film.on) { const fc = filmCam((now - film.t0) / 1000); tp.copy(fc.p); tl.copy(fc.l); k = .14; }
+  cur.p.lerp(tp, k); cur.l.lerp(tl, k); CAM.position.copy(cur.p);
+  if (film.shake > .01) { CAM.position.x += (Math.random() - .5) * film.shake; CAM.position.y += (Math.random() - .5) * film.shake; film.shake *= .9; }
+  CAM.lookAt(cur.l); if (film.on) { CAM.fov = 55 + film.fov; CAM.updateProjectionMatrix(); film.fov *= .93; }
   // pièces
   const t = now / 1000;
   coin.rotation.y = t * .8 + gf * 4; coin.rotation.x = Math.sin(t * .7) * .25; coin.position.y = Math.sin(t * 1.2) * .35 - .2;
@@ -478,7 +508,7 @@ function frame(now) {
   pulses = pulses.filter((p) => { const k3 = (now - p.t0) / 1700; if (k3 < .6) p.s.position.copy(p.a.curve.getPoint(k3 / .6)); else { p.s.visible = false; const r = 1 + (k3 - .6) * 16; p.ring.scale.set(r, r, r); p.ring.material.opacity = Math.max(0, 1 - (k3 - .6) * 2.5); }
     if (k3 >= 1) { gGrp.remove(p.s); gGrp.remove(p.ring); return false; } return true; });
   // ville : les tours poussent avec le scroll du chapitre 4
-  const grow = reduce ? 1 : Math.min(1, local[3] * 1.6 + (idx > 3 ? 1 : 0));
+  const grow = film.on ? film.grow : reduce ? 1 : Math.min(1, local[3] * 1.6 + (idx > 3 ? 1 : 0));
   towers.forEach((tw) => { const d = Math.max(0, Math.min(1, grow * 1.6 - tw.userData.i / towers.length * .6)), h = Math.max(.01, tw.userData.h * (1 - Math.pow(1 - d, 3)) * (tw.userData.last ? 1 + .05 * Math.sin(t * 4) : 1) * (tw.userData.bump ? 1 + .3 * Math.max(0, 1 - (now - tw.userData.bump) / 900) : 1));
     tw.scale.y = h; tw.position.y = h / 2; tw.material.emissiveIntensity = tw.userData.hover ? 1.3 : tw.userData.last ? .8 + .3 * Math.sin(t * 3) : .35; });
   city.userData.light.position.set(Math.cos(t * .6) * 14, 14, Math.sin(t * .6) * 14);
@@ -627,6 +657,149 @@ async function poll() {
     const last = D.series[D.series.length - 1]; if (last[0] === s.date) { last[1] = s.jour; last[4] = s.comptes; last[3] = s.total; } else D.series.push([s.date, s.jour, 0, s.total, s.comptes]);
     fill(); if (fresh.length) { setOdo(before); enqueue(fresh); markSeen(); }
   } catch (e) { /* page publiée sur Claude : données figées */ }
+}
+
+// ================= FILM (≈ 38 s, tout automatique) =================
+const film = { on: false, t0: 0, timers: [], shake: 0, fov: 0, grow: 1 };
+const FILMCAM = [
+  [0, [0, 0, 60], [0, 0, 0]],
+  [2.6, [0, 0, 22], [5, 0, -6]],
+  [3.4, [4.6, .6, 2.4], [5.5, -.2, -6]],
+  [7.4, [7.5, 1.4, 0], [5.5, -.2, -6]],
+  [8.2, [3, 4, -6], [2, 0, -30]],
+  [11.4, [0, 3, -14], [0, 0, -40]],
+  [15.4, [0, 3, -26], [3, 0, -50]],
+  [16.4, [-6, 3, -42], [7, 0, -62]],
+  [18.6, [20, 6, -50], [7, 0, -62]],
+  [20.8, [10, -4, -40], [7, 0, -62]],
+  [21.6, [-18, 12, -100], [0, -3, -124]],
+  [24.2, [12, 5, -110], [0, -2, -124]],
+  [25.4, [2, 2, -134], [0, -2, -124]],
+  [26.2, [0, 12, -186], [0, -2, -200]],
+  [29.2, [9, 3, -190], [0, -2, -200]],
+  [30.0, [5, .5, -205], [5, 0, -216]],
+  [33.4, [8, 1, -207], [5, 0, -216]],
+  [34.2, [0, 0, -232], [0, 0, -300]],
+  [38.5, [0, 0, -300], [0, 0, -400]],
+];
+function filmCam(t) {
+  let i = 0; while (i < FILMCAM.length - 2 && t > FILMCAM[i + 1][0]) i++;
+  const [t0, p0, l0] = FILMCAM[i], [t1, p1, l1] = FILMCAM[i + 1], k = Math.max(0, Math.min(1, (t - t0) / (t1 - t0))), e = k * k * k * (k * (k * 6 - 15) + 10);
+  const L = (a, b) => new THREE.Vector3(a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e);
+  return { p: L(p0, p1), l: L(l0, l1) };
+}
+const FL = $("film");
+const at = (sec, fn) => film.timers.push(setTimeout(fn, sec * 1000));
+const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&";
+// texte qui s'écrit, lettre par lettre, avec un brouillage façon « décodage »
+function say(cls, text, x, y, life, opt = {}) {
+  const el = document.createElement("div"); el.className = "ft " + cls;
+  el.style.setProperty("--x", x + "%"); el.style.setProperty("--y", y + "%"); el.style.setProperty("--dd", life + "s");
+  const dx = opt.dx ?? (Math.random() - .5) * 60, dy = opt.dy ?? (Math.random() - .5) * 30;
+  el.style.setProperty("--tx", dx + "px"); el.style.setProperty("--ty", dy + "px");
+  FL.appendChild(el);
+  const speed = Math.min(opt.speed ?? 60, 520 / Math.max(1, text.length), 60);
+  let n = 0;
+  const step = () => { n++; const done = text.slice(0, n), noise = n < text.length ? GLYPHS[Math.random() * GLYPHS.length | 0] : "";
+    el.innerHTML = done + `<span style="opacity:.55">${noise}</span>` + (n < text.length || opt.cursor ? '<span class="cur"></span>' : "");
+    if (n < text.length) film.timers.push(setTimeout(step, speed)); };
+  if (opt.instant) el.textContent = text; else step();
+  film.timers.push(setTimeout(() => { el.classList.add("out"); film.timers.push(setTimeout(() => el.remove(), 600)); }, life * 1000));
+  return el;
+}
+function countIn(el, to, dur, suffix = " $", prefix = "") {
+  const s = performance.now(); (function st(n) { const k = Math.min(1, (n - s) / (dur * 1000)), e = 1 - Math.pow(1 - k, 4); el.textContent = prefix + fmt(to * e) + suffix; if (k < 1 && film.on) requestAnimationFrame(st); })(s);
+}
+function bubble(x, y, size, big, small, life, delay = 0) {
+  at(delay, () => { const b = document.createElement("div"); b.className = "fb"; b.style.setProperty("--x", x + "%"); b.style.setProperty("--y", y + "%"); b.style.setProperty("--s", size + "px"); b.style.setProperty("--fx2", ((Math.random() - .5) * 30) + "px");
+    b.innerHTML = `<div><b>${big}</b><span>${small}</span></div>`; FL.appendChild(b);
+    film.timers.push(setTimeout(() => { b.classList.add("out"); film.timers.push(setTimeout(() => b.remove(), 500)); }, life * 1000)); });
+}
+function shock(x = 50, y = 50, color) { const d = document.createElement("div"); d.className = "shock"; d.style.setProperty("--x", x + "%"); d.style.setProperty("--y", y + "%"); if (color) { d.style.borderColor = color; d.style.boxShadow = `0 0 40px ${color}`; } FL.appendChild(d); setTimeout(() => d.remove(), 1100); film.shake = 1.2; film.fov = 9; }
+function flash(a = .7) { const f = $("flash"); f.animate([{ opacity: a }, { opacity: 0 }], { duration: 500, easing: "ease-out" }); }
+function rain(n = 60) { for (let i = 0; i < n; i++) { const x = Math.random() * innerWidth; parts.push({ x, y: -20 - Math.random() * 200, vx: (Math.random() - .5) * 2, vy: 6 + Math.random() * 6, l: 0, m: 90, tx: x, ty: innerHeight + 80, h: Math.random() < .7 ? 42 : 325, r: 3 + Math.random() * 4 }); } }
+// bulles d'ambiance (canvas)
+let bubs = [];
+function bubbleField(n) { for (let i = 0; i < n; i++) bubs.push({ x: Math.random() * innerWidth, y: innerHeight + Math.random() * 300, r: 6 + Math.random() * 34, v: 1.2 + Math.random() * 3.2, w: Math.random() * 6, h: [42, 325, 190, 265][i % 4] }); }
+(function bubl() {
+  if (bubs.length) { fg.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    bubs = bubs.filter((b) => { b.y -= b.v; b.x += Math.sin(b.y / 60 + b.w) * .8;
+      const g = fg.createRadialGradient(b.x - b.r * .35, b.y - b.r * .35, b.r * .1, b.x, b.y, b.r); g.addColorStop(0, "rgba(255,255,255,.55)"); g.addColorStop(.35, `hsla(${b.h},100%,70%,.12)`); g.addColorStop(1, `hsla(${b.h},100%,65%,.35)`);
+      fg.fillStyle = g; fg.beginPath(); fg.arc(b.x, b.y, b.r, 0, 7); fg.fill(); fg.strokeStyle = `hsla(${b.h},100%,80%,.45)`; fg.lineWidth = 1; fg.stroke(); return b.y > -60; }); }
+  requestAnimationFrame(bubl);
+})();
+// courbe plein écran
+function filmChart(t0, dur) {
+  const c = $("fchart"), g = c.getContext("2d"), s = D.series, vals = s.map((p) => p[3]), mx = Math.max(...vals) * 1.08, mn = Math.min(0, ...vals);
+  const st = performance.now();
+  (function dr(now) {
+    if (!film.on) return; const r = c.getBoundingClientRect(); c.width = r.width * devicePixelRatio; c.height = r.height * devicePixelRatio; g.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    const W = r.width, H = r.height, k = Math.min(1, (now - st) / (dur * 1000)), e = 1 - Math.pow(1 - k, 2), n = e * (s.length - 1), X = (i) => i / (s.length - 1) * W, Y = (v) => H - (v - mn) / (mx - mn) * H;
+    g.clearRect(0, 0, W, H);
+    const pts = []; for (let i = 0; i <= Math.floor(n); i++) pts.push([X(i), Y(vals[i])]); const f = n - Math.floor(n), i0 = Math.floor(n);
+    if (i0 < s.length - 1) pts.push([X(i0) + (X(i0 + 1) - X(i0)) * f, Y(vals[i0]) + (Y(vals[i0 + 1]) - Y(vals[i0])) * f]);
+    const fillg = g.createLinearGradient(0, 0, 0, H); fillg.addColorStop(0, "rgba(255,79,180,.45)"); fillg.addColorStop(1, "rgba(138,107,255,0)");
+    g.beginPath(); g.moveTo(0, H); pts.forEach((p) => g.lineTo(p[0], p[1])); g.lineTo(pts[pts.length - 1][0], H); g.closePath(); g.fillStyle = fillg; g.fill();
+    const lg = g.createLinearGradient(0, 0, W, 0); lg.addColorStop(0, "#8a6bff"); lg.addColorStop(.6, "#ff4fb4"); lg.addColorStop(1, "#ffc861");
+    g.shadowColor = "#ff4fb4"; g.shadowBlur = 30; g.strokeStyle = lg; g.lineWidth = 6; g.lineJoin = "round"; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke(); g.shadowBlur = 0;
+    g.font = "900 22px Unbounded, sans-serif"; g.textAlign = "center";
+    for (let m = 1000; m <= mx; m += 1000) { const i = vals.findIndex((v) => v >= m); if (i >= 0 && i <= n) { const age = Math.min(1, (n - i) / 2); g.fillStyle = `rgba(255,200,97,${age})`; g.beginPath(); g.arc(X(i), Y(vals[i]), 7, 0, 7); g.fill(); g.fillText(fmt(m / 1000) + "K", X(i), Y(vals[i]) - 22 - (1 - age) * 20); } }
+    const h = pts[pts.length - 1]; for (let q = 8; q >= 1; q--) { g.fillStyle = `rgba(255,${140 + q * 14},${210 - q * 20},${.06 * q})`; g.beginPath(); g.arc(h[0], h[1], 4 + q * 5, 0, 7); g.fill(); }
+    g.fillStyle = "#fff"; g.beginPath(); g.arc(h[0], h[1], 7, 0, 7); g.fill();
+    requestAnimationFrame(dr);
+  })(st);
+  at(dur + 1.1, () => c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, fill: "forwards" }));
+}
+function startFilm() {
+  if (film.on) return; queue = []; film.on = true; film.t0 = performance.now(); film.grow = 0; document.body.classList.add("filming"); $("auto").classList.add("on"); $("auto").textContent = "■";
+  $("fchart").getAnimations().forEach((x) => x.cancel()); $("fchart").style.opacity = 1; $("fchart").getContext("2d").clearRect(0, 0, 9999, 9999);
+  const lvl = Math.floor(D.total / 1000) + 1, name = LV.filter((l) => lvl >= l[0]).pop()[1], best = D.series.reduce((a, p) => p[1] > a[1] ? p : a, D.series[0]);
+  const rt = Object.values(D.reg).reduce((a, b) => a + b, 0);
+  // 0 – 3 s : ouverture
+  bubbleField(40); flash(.9);
+  at(.3, () => say("k", "ELDORADO · " + MOIS[new Date(D.maj).getMonth()].replace(".", "").toUpperCase() + " " + new Date(D.maj).getFullYear(), 50, 36, 2.6, { dy: -30 }));
+  at(.9, () => say("big", "LE BILAN", 50, 52, 2.0, { speed: 70, dx: 40 }));
+  // 3 – 7.5 s : bénéfice
+  at(3.1, () => { flash(.5); say("k", "BÉNÉFICE NET", 50, 28, 4.1, { dy: -20 }); });
+  at(3.5, () => { const el = say("big", "0 $", 50, 50, 3.8, { instant: true, dx: 0, dy: 0 }); countIn(el, D.total, 1.8); });
+  at(5.3, () => { shock(50, 50); bubbleField(30); burst(innerWidth / 2, innerHeight / 2, innerWidth / 2, innerHeight * 1.2, 80); });
+  at(5.6, () => say("sm", "depuis le 21 septembre", 50, 68, 1.8));
+  // 7.5 – 11.5 s : aujourd'hui
+  at(7.6, () => say("k", "AUJOURD'HUI", 50, 26, 3.7));
+  at(7.9, () => { const el = say("big", "+0 $", 50, 48, 3.4, { instant: true, dx: -30 }); countIn(el, D.jour, 1.2, " $", "+"); rain(90); });
+  bubble(20, 66, 190, D.comptes, "COMPTES", 2.9, 8.5); bubble(80, 64, 210, Math.round(100 * D.jour / D.objectif) + "%", "OBJECTIF 200 $", 2.8, 8.8); bubble(50, 80, 150, "🔥 " + D.streak, "JOURS DE SÉRIE", 2.4, 9.2);
+  at(9.1, () => shock(50, 48, "#4cf0a5"));
+  // 11.5 – 15.5 s : trajectoire
+  at(11.6, () => { say("k", "LA TRAJECTOIRE", 50, 16, 4); say("mid", "0 → " + fmt(D.total) + " $ EN " + D.series.length + " JOURS", 50, 24, 3.9, { speed: 28 }); filmChart(11.8, 2.8); });
+  // 16 – 21 s : globe
+  at(16.0, () => { flash(.4); say("k", Object.keys(D.reg).length + " SERVEURS · " + fmt(rt) + " COMPTES", 50, 14, 4.6); });
+  Object.entries(D.reg).sort((a, b) => b[1] - a[1]).forEach(([k, v], i) => { const pos = [[18, 36], [82, 34], [14, 68], [86, 66], [30, 84], [70, 84], [50, 30]][i] || [50, 50];
+    bubble(pos[0], pos[1], 110 + 120 * v / Math.max(...Object.values(D.reg)), k, fmt(v) + " · " + Math.round(100 * v / rt) + "%", 4.2 - i * .25, 16.5 + i * .3);
+    at(16.6 + i * .3, () => pulse(k)); });
+  // 21 – 25.5 s : ville
+  at(21.2, () => { const s0 = performance.now(); (function g2(n) { film.grow = Math.min(1, (n - s0) / 1800); if (film.grow < 1 && film.on) requestAnimationFrame(g2); })(s0); say("big", "CHAQUE JOUR", 50, 30, 3.9, { speed: 45, dx: -60 }); });
+  at(22.0, () => say("big", "UNE TOUR", 50, 52, 3.1, { speed: 60, dx: 60 }));
+  at(23.0, () => { say("mid", "RECORD " + fmt(best[1]) + " $ · " + dayLabel(best[0]).toUpperCase(), 50, 72, 2.1, { speed: 30 }); shock(50, 60, "#ff4fb4"); });
+  // 25.5 – 29.5 s : heures
+  at(25.8, () => say("k", "HEURE DE POINTE", 50, 26, 3.4));
+  at(26.1, () => { say("big", peak[1] + " H", 50, 48, 3.1, { speed: 120 }); shock(50, 48, "#4fe3ff"); bubbleField(35); });
+  at(27.0, () => say("mid", "LE " + ["LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI", "DIMANCHE"][peak[0]] + " SURTOUT", 50, 68, 2.2, { speed: 30 }));
+  // 29.5 – 33.5 s : niveau
+  at(29.8, () => say("k", "NIVEAU", 30, 30, 3.5));
+  at(30.1, () => { say("big", lvl + " · " + name, 34, 46, 3.2, { speed: 70 }); shock(70, 50, "#ffc861"); });
+  at(30.8, () => { const el = say("mid", "", 34, 64, 2.6, { instant: true }); el.innerHTML = `<div class="fxp"><i></i></div>`; setTimeout(() => (el.querySelector("i").style.width = (D.total % 1000) / 10 + "%"), 80); });
+  at(31.3, () => { const el = say("mid", "", 34, 76, 2.1, { instant: true }); const B = [["📦", D.comptesTotal >= 1000], ["🔥", D.streak >= 14], ["⚡", ((D.bestDay && D.bestDay.v) || best[1]) >= 500], ["💎", D.ventesTotal >= 10000], ["👑", D.total >= 10000]];
+    el.innerHTML = `<div class="fbadges">${B.map((b, i) => `<i style="animation-delay:${i * .12}s;opacity:${b[1] ? 1 : .3}">${b[0]}</i>`).join("")}</div>`; });
+  // 33.5 – 38.5 s : final
+  at(34.0, () => { flash(.6); say("k", "PROCHAIN CAP", 50, 34, 3.6); });
+  at(34.4, () => { say("big", fmt(lvl * 1000) + " $", 50, 52, 3.2, { speed: 80 }); bubbleField(60); rain(60); });
+  at(36.2, () => { shock(50, 52); burst(innerWidth / 2, innerHeight / 2, innerWidth / 2, -100, 120); });
+  at(37.0, () => say("mid", "ELDORADO", 50, 74, 1.4, { speed: 40 }));
+  at(38.6, () => { flash(1); stopFilm(); });
+}
+function stopFilm() {
+  film.timers.forEach(clearTimeout); film.timers = []; film.on = false; film.grow = 1; FL.querySelectorAll(".ft,.fb,.shock").forEach((e) => e.remove()); bubs = [];
+  document.body.classList.remove("filming"); $("auto").classList.remove("on"); $("auto").textContent = "▶ FILM"; CAM.fov = 55; CAM.updateProjectionMatrix();
 }
 
 // ---------------- Démarrage ----------------
