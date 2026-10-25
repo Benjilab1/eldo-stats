@@ -217,7 +217,7 @@ body.filming #rec { opacity: 1; }
 <div class="hud">
   <div class="brand"><div class="logo">E</div><div><b>ELDORADO</b><small id="maj"></small></div></div>
   <div class="player">
-    <div class="btns"><button id="prev" aria-label="Chapitre précédent">◀</button><button id="auto" aria-label="Lancer le film">▶ FILM</button><button id="snd" aria-label="Son du film" aria-pressed="true">🔊</button><button id="next" aria-label="Chapitre suivant">▶▶</button></div>
+    <div class="btns"><button id="prev" aria-label="Chapitre précédent">◀</button><button id="auto" aria-label="Lancer le film">▶ FILM</button><button id="snd" aria-label="Choisir la musique du film" title="Musique du film">🎵</button><input type="file" id="sndFile" accept="audio/*" hidden><button id="next" aria-label="Chapitre suivant">▶▶</button></div>
     <div class="track"><div class="t" id="trackT">01 · <em>Le total</em></div><div class="segs" id="segs"></div></div>
     <div class="tools"><button id="replay" title="Rejouer les dernières ventes">↻</button></div>
   </div>
@@ -395,7 +395,7 @@ function onReveal(r) {
 
 // Lecture automatique : le film de 38 s
 $("auto").onclick = () => (film.on ? stopFilm() : startFilm());
-addEventListener("keydown", (e) => { if (e.key === "Escape" && film.on) stopFilm(); if (e.key.toLowerCase() === "f" && !film.on) startFilm(); if (e.key.toLowerCase() === "m") $("snd").click(); if (e.key === "ArrowRight") goTo(chState().idx + 1); if (e.key === "ArrowLeft") goTo(chState().idx - 1); });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && film.on) stopFilm(); if (e.key.toLowerCase() === "f" && !film.on) startFilm(); if (e.key.toLowerCase() === "m" && MUSIC.el) MUSIC.el.muted = !MUSIC.el.muted; if (e.key === "ArrowRight") goTo(chState().idx + 1); if (e.key === "ArrowLeft") goTo(chState().idx - 1); });
 
 // ---------------- Scène WebGL ----------------
 const has3D = typeof THREE !== "undefined";
@@ -513,7 +513,7 @@ function frame(now) {
   if (gi === 3) { const a = gf * 1.4 - .3; tp.add(new THREE.Vector3(Math.sin(a) * 6, 0, Math.cos(a) * 3 - 3).multiplyScalar(1 - e)); }
   if (!cur.init) { cur.p.copy(tp); cur.l.copy(tl); cur.init = true; }
   let k = reduce ? 1 : .06;
-  if (film.on) { const fc = filmCam((now - film.t0) / 1000); tp.copy(fc.p); tl.copy(fc.l); k = .14; }
+  if (film.on) { const fc = filmCam(filmClock()); tp.copy(fc.p); tl.copy(fc.l); k = .14; }
   cur.p.lerp(tp, k); cur.l.lerp(tl, k); CAM.position.copy(cur.p);
   if (film.shake > .01) { CAM.position.x += (Math.random() - .5) * film.shake; CAM.position.y += (Math.random() - .5) * film.shake; film.shake *= .9; }
   CAM.lookAt(cur.l); if (film.on) { CAM.fov = 55 + film.fov; CAM.updateProjectionMatrix(); film.fov *= .93; }
@@ -705,19 +705,23 @@ const FILMCAM = [
   [38.5, [0, 0, -300], [0, 0, -400]],
 ];
 function filmCam(t) {
-  let i = 0; while (i < FILMCAM.length - 2 && t > FILMCAM[i + 1][0]) i++;
-  const [t0, p0, l0] = FILMCAM[i], [t1, p1, l1] = FILMCAM[i + 1], k = Math.max(0, Math.min(1, (t - t0) / (t1 - t0))), e = k * k * k * (k * (k * 6 - 15) + 10);
+  const FC = film.cam || FILMCAM; let i = 0; while (i < FC.length - 2 && t > FC[i + 1][0]) i++;
+  const [t0, p0, l0] = FC[i], [t1, p1, l1] = FC[i + 1], k = Math.max(0, Math.min(1, (t - t0) / (t1 - t0))), e = k * k * k * (k * (k * 6 - 15) + 10);
   const L = (a, b) => new THREE.Vector3(a[0] + (b[0] - a[0]) * e, a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e);
   return { p: L(p0, p1), l: L(l0, l1) };
 }
 const FL = $("film");
-const at = (sec, fn) => film.timers.push(setTimeout(fn, sec * 1000));
+const at = (sec, fn) => { if (film.sched) { const s0 = sec; return qAt(W(s0), () => { film.k = Wk(s0); fn(); }); } film.timers.push(setTimeout(fn, Math.max(0, sec * 1000))); };
+// file d'événements déclenchés par l'horloge du morceau (pas par des minuteurs) : tout tombe pile sur le son
+const qAt = (tt, fn) => { film.q.push([tt, fn]); };
+function filmClock() { const a = MUSIC.el; return a && film.music && !a.paused ? a.currentTime - SONG.drop : (performance.now() - film.t0) / 1000; }
+(function qLoop() { if (film.on && film.q && film.q.length) { const now = filmClock(); film.q.sort((x, y) => x[0] - y[0]); while (film.on && film.q.length && film.q[0][0] <= now) { const e = film.q.shift(); try { e[1](); } catch (er) { console.error(er); } } } requestAnimationFrame(qLoop); })();
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&";
 // texte qui s'écrit, lettre par lettre, avec un brouillage façon « décodage »
 function say(cls, text, x, y, life, opt = {}) {
   const el = document.createElement("div"); el.className = "ft " + cls + (cls.includes("big") ? " gl" : "");
   if (cls.includes("big") && !opt.instant) SFX("whoosh", .1);
-  el.style.setProperty("--x", x + "%"); el.style.setProperty("--y", y + "%"); el.style.setProperty("--dd", life + "s");
+  el.style.setProperty("--x", x + "%"); el.style.setProperty("--y", y + "%"); life *= film.k || 1; el.style.setProperty("--dd", life + "s");
   const dx = opt.dx ?? (Math.random() - .5) * 60, dy = opt.dy ?? (Math.random() - .5) * 30;
   el.style.setProperty("--tx", dx + "px"); el.style.setProperty("--ty", dy + "px");
   FL.appendChild(el);
@@ -736,7 +740,7 @@ function countIn(el, to, dur, suffix = " $", prefix = "") {
 function bubble(x, y, size, big, small, life, delay = 0) {
   at(delay, () => { const b = document.createElement("div"); b.className = "fb"; b.style.setProperty("--x", x + "%"); b.style.setProperty("--y", y + "%"); b.style.setProperty("--s", size + "px"); b.style.setProperty("--fx2", ((Math.random() - .5) * 30) + "px");
     b.innerHTML = `<div><b>${big}</b><span>${small}</span></div>`; FL.appendChild(b); SFX("pop", 420 + Math.random() * 500);
-    film.timers.push(setTimeout(() => { b.classList.add("out"); film.timers.push(setTimeout(() => b.remove(), 500)); }, life * 1000)); });
+    const lf = life * (film.k || 1); film.timers.push(setTimeout(() => { b.classList.add("out"); film.timers.push(setTimeout(() => b.remove(), 500)); }, lf * 1000)); });
 }
 function shock(x = 50, y = 50, color) { const d = document.createElement("div"); d.className = "shock"; d.style.setProperty("--x", x + "%"); d.style.setProperty("--y", y + "%"); if (color) { d.style.borderColor = color; d.style.boxShadow = `0 0 40px ${color}`; } FL.appendChild(d); setTimeout(() => d.remove(), 1100); film.shake = 1.2; film.fov = 9; SFX("impact", .8); }
 function flash(a = .7) { const f = $("flash"); f.animate([{ opacity: a }, { opacity: 0 }], { duration: 500, easing: "ease-out" }); }
@@ -773,28 +777,46 @@ function filmChart(t0, dur) {
   })(st);
   at(dur + 1.1, () => c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, fill: "forwards" }));
 }
-// ---------- Film v5 : décompte, son, warp, HUD ----------
-const OFF = 2.4; // durée du décompte avant le film
-const FILM_LEN = 39;
-const SFX = (fn, ...a) => { if (AU.on) try { AU[fn](AU.now() + .01, ...a); } catch (e) {} };
-function startFilm() {
-  if (film.on) return; queue = []; film.on = true; film.t0 = performance.now() + OFF * 1000; film.grow = 0; document.body.classList.add("filming"); $("auto").classList.add("on"); $("auto").textContent = "■";
+// ---------- Film v6 : calé sur la musique (Sematary · Raging Wolf, 132 BPM) ----------
+// Repères mesurés sur le morceau : premier 808 (drop) à 14,683 s, une phrase de 2 mesures = 3,636 s.
+const SONG = { dur: 165.59, start: 11.98, drop: 14.683, beat: 60 / 132, phrase: 8 * 60 / 132,
+  hits: [24.23, 37.21, 37.88, 44.61, 46.05, 47.4] };
+const P = SONG.phrase, OFF = SONG.drop - SONG.start;
+// la timeline d'origine (en secondes) → temps du morceau après le drop : chaque partie démarre sur un 808
+const ANCH = [[0, 0], [3, P], [7.5, 2 * P], [11.5, 3 * P], [16, 4 * P], [21, 5 * P], [25.5, 6 * P], [29.5, 7 * P], [33.5, 8 * P], [38.6, 10 * P]];
+const FILM_LEN = 10 * P;
+function W(s) { let i = 0; while (i < ANCH.length - 2 && s > ANCH[i + 1][0]) i++; const [a0, b0] = ANCH[i], [a1, b1] = ANCH[i + 1]; return b0 + (s - a0) * (b1 - b0) / (a1 - a0); }
+function Wk(s) { let i = 0; while (i < ANCH.length - 2 && s > ANCH[i + 1][0]) i++; const [a0, b0] = ANCH[i], [a1, b1] = ANCH[i + 1]; return (b1 - b0) / (a1 - a0); }
+const SFX = () => {};
+const MUSIC = { el: null, ok: false };
+const atA = (tt, fn) => qAt(tt, fn); // temps du morceau (0 = drop)
+async function startFilm() {
+  if (film.on) return; queue = []; film.on = true; film.q = []; film.music = false; film.k = 1; film.sched = false; film.grow = 0;
+  film.cam = FILMCAM.map((k) => [W(k[0]), k[1], k[2]]);
+  document.body.classList.add("filming"); $("auto").classList.add("on"); $("auto").textContent = "■";
   $("fchart").getAnimations().forEach((x) => x.cancel()); $("fchart").style.opacity = 1; $("fchart").getContext("2d").clearRect(0, 0, 9999, 9999);
   $("recTop").textContent = "ELDORADO · " + dayLabel(D.maj.slice(0, 10)).toUpperCase() + " · " + D.maj.slice(11, 16);
-  if (AU.init()) score(AU.now() + OFF + .05);
-  // décompte 3 · 2 · 1
-  bubbleField(14);
-  ["3", "2", "1"].forEach((n, i) => at(i * .8, () => { say("big cd", n, 50, 52, .62, { instant: true, dx: 0, dy: 0 }); film.fov = 6; if (i === 0) say("k", "ELDORADO PRÉSENTE", 50, 24, 2.3, { dy: 0 }); }));
-  at(OFF - .35, () => warp(.7, .25));
-  at(OFF, filmTimeline);
+  let lag = 0; const a = MUSIC.el;
+  if (a) { try { a.pause(); a.volume = 1; a.currentTime = SONG.start; await a.play(); film.music = true; lag = Math.max(0, a.currentTime - SONG.start); } catch (e) {} }
+  if (!film.on) return;
+  film.t0 = performance.now() + (OFF - lag) * 1000;
+  const pre = (x, fn) => qAt(x, fn);
+  // intro : le morceau monte, « ELDORADO PRÉSENTE », puis 3 · 2 · 1 sur les 3 derniers temps
+  bubbleField(14); say("k", "ELDORADO PRÉSENTE", 50, 30, OFF - SONG.beat * 3, { dy: 0 });
+  for (let b = -6; b < -3; b++) pre(b * SONG.beat, () => FL.animate([{ scale: 1.015 }, { scale: 1 }], { duration: 200 }));
+  ["3", "2", "1"].forEach((n, i) => pre((i - 3) * SONG.beat, () => { say("big cd", n, 50, 52, SONG.beat * .9, { instant: true, dx: 0, dy: 0 }); film.fov = 7; FL.animate([{ scale: 1.05 }, { scale: 1 }], { duration: 250 }); }));
+  pre(-.3, () => warp(.6, 0));
+  pre(0, filmTimeline);
 }
-// pulsation de l'image sur chaque grosse caisse
-function beatBumps() { for (let s = 0; s < 154; s += 2) { const tt = s * .25; if (isFull(tt)) at(tt, () => FL.animate([{ scale: 1.03 }, { scale: 1 }], { duration: 230, easing: "cubic-bezier(.2,.8,.2,1)" })); } }
-const isFull = (tt) => (tt >= 3 && tt < 11.5) || (tt >= 16 && tt < 33.5) || (tt >= 34 && tt < 38.5);
+const bump = (s, d = 230) => FL.animate([{ scale: s }, { scale: 1 }], { duration: d, easing: "cubic-bezier(.2,.8,.2,1)" });
 function filmTimeline() {
-  beatBumps();
-  [[2.75, .9], [7.3, .8], [11.2, .9], [15.7, 1], [20.9, .9], [25.3, .8], [29.4, .8], [33.6, 1.1]].forEach(([tt, d]) => at(tt, () => { warp(d); film.fov = 14; }));
-  at(3.0, () => { flash(.35); film.shake = 1.4; });
+  // pulsation sur chaque temps, gros coup sur chaque 808
+  const nb = Math.round(FILM_LEN / SONG.beat);
+  for (let b = 0; b < nb; b++) { const tt = b * SONG.beat, ph = b % 8 === 0; atA(tt, () => bump(ph ? 1.07 : b % 2 ? 1.012 : 1.025, ph ? 320 : 200)); }
+  SONG.hits.forEach((h) => { const tt = h - SONG.drop; if (tt > 0 && tt < FILM_LEN) atA(tt, () => { bump(1.06, 300); flash(.18); film.shake = 1.1; film.fov = 8; }); });
+  // un flash + secousse sur chaque début de partie (808), traits de vitesse juste avant
+  for (let k = 1; k <= 8; k++) { atA(k * P - .4, () => { warp(.8); }); atA(k * P, () => { flash(.32); film.shake = 1.5; film.fov = 14; }); }
+  film.sched = true;
   const lvl = Math.floor(D.total / 1000) + 1, name = LV.filter((l) => lvl >= l[0]).pop()[1], best = D.series.reduce((a, p) => p[1] > a[1] ? p : a, D.series[0]);
   const rt = Object.values(D.reg).reduce((a, b) => a + b, 0);
   // 0 – 3 s : ouverture
@@ -812,7 +834,7 @@ function filmTimeline() {
   bubble(20, 66, 190, D.comptes, "COMPTES", 2.9, 8.5); bubble(80, 64, 210, Math.round(100 * D.jour / D.objectif) + "%", "OBJECTIF 200 $", 2.8, 8.8); bubble(50, 80, 150, "🔥 " + D.streak, "JOURS DE SÉRIE", 2.4, 9.2);
   at(9.1, () => shock(50, 48, "#4cf0a5"));
   // 11.5 – 15.5 s : trajectoire
-  at(11.6, () => { say("k", "LA TRAJECTOIRE", 50, 16, 4); say("mid", "0 → " + fmt(D.total) + " $ EN " + D.series.length + " JOURS", 50, 24, 3.9, { speed: 28 }); filmChart(11.8, 2.8); });
+  at(11.6, () => { say("k", "LA TRAJECTOIRE", 50, 16, 4); say("mid", "0 → " + fmt(D.total) + " $ EN " + D.series.length + " JOURS", 50, 24, 3.9, { speed: 28 }); filmChart(11.8, 2.8 * film.k); });
   bubble(13, 22, 150, fmt(D.comptesTotal), "COMPTES VENDUS", 2.2, 13.6); bubble(87, 22, 150, fmt(D.ventesTotal) + " $", "ENCAISSÉS", 2.0, 13.9);
   // 16 – 21 s : globe
   at(16.0, () => { flash(.4); say("k", Object.keys(D.reg).length + " SERVEURS · " + fmt(rt) + " COMPTES", 50, 14, 4.6); });
@@ -840,11 +862,12 @@ function filmTimeline() {
   at(36.2, () => { shock(50, 52); burst(innerWidth / 2, innerHeight / 2, innerWidth / 2, -100, 120); });
   at(37.0, () => { say("mid", "ELDORADO", 50, 72, 1.5, { speed: 40 }); say("sm", fmt(D.total) + " $ · " + fmt(D.comptesTotal) + " comptes · " + D.series.length + " jours", 50, 81, 1.5, { speed: 14 }); });
   at(38.6, () => { flash(1); stopFilm(); });
+  film.sched = false;
 
 }
 function stopFilm() {
   film.timers.forEach(clearTimeout); film.timers = []; film.on = false; film.grow = 1; FL.querySelectorAll(".ft,.fb,.shock").forEach((e) => e.remove()); bubs = [];
-  document.body.classList.remove("filming"); $("auto").classList.remove("on"); $("auto").textContent = "▶ FILM"; CAM.fov = 55; CAM.updateProjectionMatrix(); AU.kill();
+  document.body.classList.remove("filming"); $("auto").classList.remove("on"); $("auto").textContent = "▶ FILM"; CAM.fov = 55; CAM.updateProjectionMatrix(); film.sched = false; film.cam = null; film.q = []; film.k = 1; const a = MUSIC.el; if (a && !a.paused) { const v0 = a.volume, s = performance.now(); (function fd(n) { const k = (n - s) / 1400; if (k >= 1 || film.on) { if (!film.on) a.pause(); a.volume = 1; return; } a.volume = Math.max(0, Math.min(1, v0 * (1 - Math.max(0, k)))); requestAnimationFrame(fd); })(s); }
 }
 
 // ---------- Warp (traits de vitesse entre les chapitres) ----------
@@ -863,70 +886,26 @@ function warp(d = .9, v = .2) { warpT = performance.now(); warpDur = d * 1000; w
 // ---------- HUD caméra (REC, chrono, chapitre, progression) ----------
 const CHAPS = [[0, "INTRO"], [3, "01 · BÉNÉFICE NET"], [7.5, "02 · AUJOURD'HUI"], [11.5, "03 · TRAJECTOIRE"], [16, "04 · LE MONDE"], [21, "05 · LA VILLE"], [25.5, "06 · HEURE DE POINTE"], [29.5, "07 · NIVEAU"], [33.5, "08 · PROCHAIN CAP"]];
 (function recl() {
-  if (film.on) { const tt = (performance.now() - film.t0) / 1000, u = Math.max(0, tt + OFF);
+  if (film.on) { const tt = filmClock(), u = Math.max(0, tt + OFF);
     $("recT").textContent = "00:" + String(Math.floor(u)).padStart(2, "0") + ":" + String(Math.floor((u % 1) * 24)).padStart(2, "0");
     $("recBar").style.width = Math.min(100, u / (FILM_LEN + OFF) * 100) + "%";
-    $("recCh").textContent = tt < 0 ? "DÉCOMPTE" : CHAPS.filter((c) => tt >= c[0]).pop()[1]; }
+    $("recCh").textContent = tt < 0 ? "DÉCOMPTE" : CHAPS.filter((c) => tt >= W(c[0])).pop()[1]; }
   requestAnimationFrame(recl);
 })();
 
-// ================= SON : bande-son synthétisée (WebAudio, aucun fichier) =================
-let soundOn = true; try { soundOn = localStorage.getItem("eldo_snd") !== "0"; } catch (e) {}
-const setSnd = () => { $("snd").textContent = soundOn ? "🔊" : "🔇"; $("snd").setAttribute("aria-pressed", soundOn); };
-setSnd(); $("snd").onclick = () => { soundOn = !soundOn; try { localStorage.setItem("eldo_snd", soundOn ? "1" : "0"); } catch (e) {} setSnd(); if (!soundOn) AU.kill(); };
-const AU = {
-  ctx: null, out: null, rev: null, noise: null,
-  get on() { return !!this.ctx && soundOn; },
-  now() { return this.ctx.currentTime; },
-  init() {
-    if (!soundOn) return false; const C = window.AudioContext || window.webkitAudioContext; if (!C) return false;
-    const c = this.ctx = new C(), comp = c.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 5; comp.attack.value = .003;
-    this.out = c.createGain(); this.out.gain.value = .85; this.out.connect(comp); comp.connect(c.destination);
-    const len = c.sampleRate * 2.4, ir = c.createBuffer(2, len, c.sampleRate);
-    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8); }
-    this.rev = c.createConvolver(); this.rev.buffer = ir; const rg = c.createGain(); rg.gain.value = .32; this.rev.connect(rg); rg.connect(this.out);
-    const nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1; this.noise = nb;
-    c.resume(); return true;
-  },
-  kill() { if (!this.ctx) return; const c = this.ctx, t = c.currentTime; this.ctx = null; try { this.out.gain.cancelScheduledValues(t); this.out.gain.setValueAtTime(this.out.gain.value, t); this.out.gain.linearRampToValueAtTime(0, t + .6); } catch (e) {} setTimeout(() => c.close(), 900); },
-  env(g, t, a, pk, d) { g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(pk, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); },
-  osc(type, f, t, d, pk, dest, f2, a = .005) { const c = this.ctx, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d); this.env(g, t, a, pk, d); o.connect(g); g.connect(dest || this.out); o.start(t); o.stop(t + a + d + .05); },
-  nz(t, d, pk, type, f, q, dest, f2) { const c = this.ctx, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain(); s.buffer = this.noise; s.loop = true; fl.type = type; fl.frequency.setValueAtTime(f, t); if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + d); fl.Q.value = q || 1; this.env(g, t, .004, pk, d); s.connect(fl); fl.connect(g); g.connect(dest || this.out); s.start(t, Math.random()); s.stop(t + d + .1); },
-  kick(t, v = 1) { this.osc("sine", 165, t, .36, .95 * v, null, 40); this.osc("triangle", 1100, t, .018, .22 * v, null, 140); },
-  hat(t, v = 1) { this.nz(t, .04, .07 * v, "highpass", 8500, .7); },
-  clap(t) { for (let i = 0; i < 3; i++) this.nz(t + i * .012, .1, .22, "bandpass", 1700, 1.3); this.nz(t, .22, .1, "bandpass", 1700, 1.2, this.rev); },
-  bass(t, f, d, v = .3) { const c = this.ctx, o = c.createOscillator(), o2 = c.createOscillator(), fl = c.createBiquadFilter(), g = c.createGain(); o.type = "sawtooth"; o2.type = "sine"; o.frequency.value = f; o2.frequency.value = f / 2; fl.type = "lowpass"; fl.frequency.setValueAtTime(1100, t); fl.frequency.exponentialRampToValueAtTime(160, t + d); fl.Q.value = 7; this.env(g, t, .008, v, d); o.connect(fl); o2.connect(g); fl.connect(g); g.connect(this.out); o.start(t); o2.start(t); o.stop(t + d + .05); o2.stop(t + d + .05); },
-  pad(t, fs, d, v = .055) { const c = this.ctx, fl = c.createBiquadFilter(), g = c.createGain(); fl.type = "lowpass"; fl.Q.value = 2; fl.frequency.setValueAtTime(450, t); fl.frequency.linearRampToValueAtTime(2400, t + d * .5); fl.frequency.linearRampToValueAtTime(800, t + d); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .35); g.gain.setValueAtTime(v, t + Math.max(.4, d - .3)); g.gain.exponentialRampToValueAtTime(.0001, t + d + .5); fl.connect(g); g.connect(this.out); g.connect(this.rev);
-    fs.forEach((f) => [-9, 0, 9].forEach((det) => { const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = f; o.detune.value = det; o.connect(fl); o.start(t); o.stop(t + d + .6); })); },
-  arp(t, f, v = .05) { this.osc("square", f, t, .12, v); this.osc("square", f * 2, t, .1, v * .35, this.rev); },
-  riser(t, d, v = .22) { this.nz(t, d, v, "bandpass", 300, 3, null, 8000); this.osc("sawtooth", 110, t, d, v * .22, null, 990, d * .85); },
-  impact(t, v = 1) { this.osc("sine", 95, t, 1.3, .95 * v, null, 30); this.nz(t, .5, .45 * v, "lowpass", 3500, .7, null, 150); this.nz(t, 1.8, .3 * v, "lowpass", 2600, .7, this.rev, 200); },
-  whoosh(t, v = .2) { this.nz(t, .5, v, "bandpass", 6000, 1.6, null, 280); },
-  coin(t) { [[1975, 0], [2637, .07], [3951, .14]].forEach(([f, o]) => { this.osc("triangle", f, t + o, .4, .14); this.osc("sine", f, t + o, .5, .05, this.rev); }); this.nz(t, .05, .12, "highpass", 6000, 1); },
-  pop(t, f = 660) { this.osc("sine", f * 1.7, t, .11, .16, null, f * .6); },
-  beep(t, f = 880, d = .2) { this.osc("square", f, t, d, .12); this.osc("sine", f, t, d + .3, .07, this.rev); },
-  tick(t) { this.nz(t, .012, .035, "highpass", 5000, 1); },
-};
-// Partition : 120 BPM, La mineur (Am – F – C – G), 2 s par mesure. T0 = début du film (après le décompte)
-function score(T0) {
-  const A = AU, CH = [[110, 130.81, 164.81], [87.31, 110, 130.81], [130.81, 164.81, 196], [98, 123.47, 146.83]], RT = [55, 43.65, 65.41, 49];
-  [-2.4, -1.6, -.8].forEach((x, i) => A.beep(T0 + x, 880, .22)); A.riser(T0 - 1.2, 1.15, .14);
-  A.impact(T0, 1); A.impact(T0 + 3, .9);
-  const arpOn = (tt) => (tt >= 16 && tt < 21) || (tt >= 30 && tt < 33.4) || (tt >= 34 && tt < 38.5);
-  for (let bar = 0; bar < 20; bar++) { const tt = bar * 2; if (tt >= 38.5) break; A.pad(T0 + tt, CH[bar % 4].map((f) => f * 2), 2, tt >= 11.5 && tt < 16 ? .07 : .045); }
-  for (let s = 0; s < 154; s++) {
-    const tt = s * .25, t = T0 + tt, bar = Math.floor(tt / 2) % 4, beat = s % 2 === 0, bn = (s / 2) % 4, full = isFull(tt);
-    if (full && beat) A.kick(t);
-    if (full && beat && (bn === 1 || bn === 3)) A.clap(t);
-    if (tt < 38.5) A.hat(t + (beat ? 0 : .01), full ? (beat ? .6 : 1) : .45);
-    if (full) A.bass(t, RT[bar] * (s % 4 === 3 ? 2 : 1), .22);
-    else if (tt < 3 && beat) A.bass(t, RT[bar], .4, .2);
-    if (arpOn(tt)) { const ch = CH[bar]; [0, 1].forEach((h) => A.arp(t + h * .125, ch[(s * 2 + h) % 3] * (h ? 8 : 4))); }
-  }
-  A.riser(T0 + 1.5, 1.5, .18); A.riser(T0 + 14.3, 1.7, .22); A.riser(T0 + 32, 2, .3);
-  A.impact(T0 + 16, .9); A.impact(T0 + 34, 1.1); A.impact(T0 + 38.6, 1.2);
-  A.pad(T0 + 38.5, [220, 261.63, 329.63, 440], 3.2, .06); A.bass(T0 + 38.5, 55, 2.5, .3);
+// ================= MUSIQUE : ton fichier, gardé sur cet appareil =================
+const IDB = { open() { return new Promise((res, rej) => { const r = indexedDB.open("eldo", 1); r.onupgradeneeded = () => r.result.createObjectStore("f"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  async put(k, v) { const db = await this.open(); return new Promise((res) => { const tx = db.transaction("f", "readwrite"); tx.objectStore("f").put(v, k); tx.oncomplete = res; tx.onerror = res; }); },
+  async get(k) { const db = await this.open(); return new Promise((res) => { const q = db.transaction("f").objectStore("f").get(k); q.onsuccess = () => res(q.result); q.onerror = () => res(null); }); } };
+function setMusic(blob, save) {
+  if (MUSIC.el) { MUSIC.el.pause(); URL.revokeObjectURL(MUSIC.el.src); }
+  const a = new Audio(URL.createObjectURL(blob)); a.preload = "auto"; MUSIC.el = a;
+  a.addEventListener("loadedmetadata", () => { MUSIC.ok = Math.abs(a.duration - SONG.dur) < 2; $("snd").textContent = MUSIC.ok ? "🎵 ✓" : "🎵 ?"; $("snd").title = MUSIC.ok ? "Musique calée : Raging Wolf" : "Ce n'est pas le morceau calé : le rythme ne tombera pas juste"; });
+  if (save) { try { IDB.put("music", blob); } catch (e) {} }
 }
+$("snd").onclick = () => $("sndFile").click();
+$("sndFile").onchange = (e) => { const f = e.target.files[0]; if (f) setMusic(f, true); };
+(async () => { try { const b = await IDB.get("music"); if (b) setMusic(b, false); } catch (e) {} })();
 
 // ---------------- Démarrage ----------------
 fill();
