@@ -205,6 +205,16 @@ body.filming #rec { opacity: 1; }
 #rec .cor { width: 26px; height: 26px; border: 2px solid rgba(255,255,255,.35); }
 #rec .c1 { top: 8vh; left: 2.4vw; border-right: 0; border-bottom: 0; } #rec .c2 { top: 8vh; right: 2.4vw; border-left: 0; border-bottom: 0; }
 #rec .c3 { bottom: 8vh; left: 2.4vw; border-right: 0; border-top: 0; } #rec .c4 { bottom: 8vh; right: 2.4vw; border-left: 0; border-top: 0; }
+/* ---- Film v7 : style edit d'anime ---- */
+.ft.sl.sl.sl { animation: slamIn .17s cubic-bezier(.15,1.6,.35,1) both; }
+.ft.sl.sl.sl.out { animation: none; opacity: 0; }
+@keyframes slamIn { 0% { transform: translate(-50%, -50%) scale(2.6) rotate(-4deg); opacity: 0; filter: blur(12px) drop-shadow(-14px 0 0 #ff2e6a) drop-shadow(14px 0 0 #2ee6ff); } 55% { opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1); } }
+.ft.xl { font: 900 clamp(90px, 17vw, 300px)/.85 var(--f-display); letter-spacing: -.05em; background: linear-gradient(100deg, #fff 15%, var(--gold) 45%, var(--rose) 75%, var(--violet)); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 60px rgba(255,79,180,.6)); font-variant-numeric: tabular-nums; }
+.ft.ol { font: 900 clamp(60px, 11vw, 200px)/.9 var(--f-display); letter-spacing: -.03em; color: transparent; -webkit-text-stroke: 2px rgba(255,255,255,.9); }
+body.imp #gl, body.imp #fx { filter: invert(1) grayscale(1) contrast(2.4); }
+body.imp #film { filter: invert(1) contrast(1.6); }
+body.blk #gl, body.blk #fx { opacity: 0; }
+body.rgb #gl { filter: drop-shadow(-7px 0 0 rgba(255,46,106,.85)) drop-shadow(7px 0 0 rgba(46,230,255,.85)); }
 @media (prefers-reduced-motion: reduce) { .reveal > *, .odo .d i, .reg .bar i, .xp i { transition: none !important; } .feed li, .scrollcue i::after { animation: none; } }
 </style>
 
@@ -513,17 +523,21 @@ function frame(now) {
   if (gi === 3) { const a = gf * 1.4 - .3; tp.add(new THREE.Vector3(Math.sin(a) * 6, 0, Math.cos(a) * 3 - 3).multiplyScalar(1 - e)); }
   if (!cur.init) { cur.p.copy(tp); cur.l.copy(tl); cur.init = true; }
   let k = reduce ? 1 : .06;
-  if (film.on) { const fc = filmCam(filmClock()); tp.copy(fc.p); tl.copy(fc.l); k = .14; }
+  let roll = 0; film.baseFov = 55;
+  if (film.on && film.shot) { const s = film.shot, kk = Math.max(0, Math.min(1, (filmClock() - s.t0) / s.dur)), ee = EASE[s.e || "out"](kk);
+    tp.set(...s.p0).lerp(new THREE.Vector3(...s.p1), ee); tl.set(...s.l0).lerp(new THREE.Vector3(...(s.l1 || s.l0)), ee); k = 1;
+    roll = (s.r0 || 0) + ((s.r1 ?? s.r0 ?? 0) - (s.r0 || 0)) * ee; const f0 = s.f0 || 55, f1 = s.f1 ?? f0; film.baseFov = f0 + (f1 - f0) * ee; }
+  else if (film.on) { const fc = filmCam(filmClock()); tp.copy(fc.p); tl.copy(fc.l); k = .14; }
   cur.p.lerp(tp, k); cur.l.lerp(tl, k); CAM.position.copy(cur.p);
   if (film.shake > .01) { CAM.position.x += (Math.random() - .5) * film.shake; CAM.position.y += (Math.random() - .5) * film.shake; film.shake *= .9; }
-  CAM.lookAt(cur.l); if (film.on) { CAM.fov = 55 + film.fov; CAM.updateProjectionMatrix(); film.fov *= .93; }
+  CAM.lookAt(cur.l); if (roll) CAM.rotateZ(roll); if (film.on) { CAM.fov = Math.max(12, Math.min(120, film.baseFov + film.fov)); CAM.updateProjectionMatrix(); film.fov *= .86; }
   // pièces
   const t = now / 1000;
   coin.rotation.y = t * .8 + gf * 4; coin.rotation.x = Math.sin(t * .7) * .25; coin.position.y = Math.sin(t * 1.2) * .35 - .2;
   coin2.rotation.y = -t * .6; coin2.position.y = Math.sin(t) * .5;
   stars.rotation.z = t * .01;
   // globe
-  if (flight) { const k2 = Math.min(1, (now - flight.s) / 1600), ee = 1 - Math.pow(1 - k2, 3); gGrp.rotation.y = flight.from + (flight.to - flight.from) * ee; if (k2 >= 1) flight = null; }
+  if (flight) { const k2 = Math.min(1, (now - flight.s) / (flight.d || 1600)), ee = 1 - Math.pow(1 - k2, 3); gGrp.rotation.y = flight.from + (flight.to - flight.from) * ee; if (k2 >= 1) flight = null; }
   else if (!reduce) gGrp.rotation.y += .0025;
   (globe.userData.rings || []).forEach((r, i) => { const a = t * (.5 + i * .2) + i * 2; r.userData.sat.position.set(Math.cos(a) * r.userData.rad, Math.sin(a) * r.userData.rad, 0); });
   Object.entries(arcs).forEach(([kk, a], i) => { a.line.geometry.setDrawRange(0, focusReg && focusReg !== kk ? 0 : Math.floor(91 * Math.min(1, (t / 2.4 + a.off) % 1.5))); const s = a.gl.userData.b * (focusReg === kk ? 1.9 : 1 + .25 * Math.sin(t * 3 + i)); a.gl.scale.set(s, s, 1); });
@@ -790,9 +804,18 @@ function Wk(s) { let i = 0; while (i < ANCH.length - 2 && s > ANCH[i + 1][0]) i+
 const SFX = () => {};
 const MUSIC = { el: null, ok: false };
 const atA = (tt, fn) => qAt(tt, fn); // temps du morceau (0 = drop)
+const B = SONG.beat;
+const EASE = { out: (k) => 1 - Math.pow(2, -9 * k), in: (k) => k * k * k, lin: (k) => k, io: (k) => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2 };
+// un plan de caméra : démarre sur le temps nb, dure nd temps (coupe nette au plan suivant)
+const shot = (nb, nd, o) => qAt(nb * B, () => { film.shot = { t0: nb * B, dur: nd * B, ...o }; });
+// texte qui claque d'un coup, reste nd temps
+const slam = (nb, cls, text, y, nd, x = 50, extra) => qAt(nb * B, () => { film.k = 1; const el = say(cls + " sl", text, x, y, nd * B, { instant: true, dx: 0, dy: 0 }); if (extra) extra(el); });
+function imp(ms = 70) { document.body.classList.add("imp"); setTimeout(() => document.body.classList.remove("imp"), ms); }
+function rgb(ms = 160) { document.body.classList.add("rgb"); setTimeout(() => document.body.classList.remove("rgb"), ms); }
+function punch(s = 1.08, d = 220) { [FL, $("gl")].forEach((el) => el.animate([{ scale: s }, { scale: 1 }], { duration: d, easing: "cubic-bezier(.2,.8,.2,1)" })); }
+const V = (v, dx = 0, dy = 0, dz = 0) => [v.x + dx, v.y + dy, v.z + dz];
 async function startFilm() {
-  if (film.on) return; queue = []; film.on = true; film.q = []; film.music = false; film.k = 1; film.sched = false; film.grow = 0;
-  film.cam = FILMCAM.map((k) => [W(k[0]), k[1], k[2]]);
+  if (film.on) return; queue = []; film.on = true; film.q = []; film.music = false; film.k = 1; film.sched = false; film.grow = 0; film.shot = null;
   document.body.classList.add("filming"); $("auto").classList.add("on"); $("auto").textContent = "■";
   $("fchart").getAnimations().forEach((x) => x.cancel()); $("fchart").style.opacity = 1; $("fchart").getContext("2d").clearRect(0, 0, 9999, 9999);
   $("recTop").textContent = "ELDORADO · " + dayLabel(D.maj.slice(0, 10)).toUpperCase() + " · " + D.maj.slice(11, 16);
@@ -800,74 +823,128 @@ async function startFilm() {
   if (a) { try { a.pause(); a.volume = 1; a.currentTime = SONG.start; await a.play(); film.music = true; lag = Math.max(0, a.currentTime - SONG.start); } catch (e) {} }
   if (!film.on) return;
   film.t0 = performance.now() + (OFF - lag) * 1000;
-  const pre = (x, fn) => qAt(x, fn);
-  // intro : le morceau monte, « ELDORADO PRÉSENTE », puis 3 · 2 · 1 sur les 3 derniers temps
-  bubbleField(14); say("k", "ELDORADO PRÉSENTE", 50, 30, OFF - SONG.beat * 3, { dy: 0 });
-  for (let b = -6; b < -3; b++) pre(b * SONG.beat, () => FL.animate([{ scale: 1.015 }, { scale: 1 }], { duration: 200 }));
-  ["3", "2", "1"].forEach((n, i) => pre((i - 3) * SONG.beat, () => { say("big cd", n, 50, 52, SONG.beat * .9, { instant: true, dx: 0, dy: 0 }); film.fov = 7; FL.animate([{ scale: 1.05 }, { scale: 1 }], { duration: 250 }); }));
-  pre(-.3, () => warp(.6, 0));
-  pre(0, filmTimeline);
+  buildEdit();
 }
-const bump = (s, d = 230) => FL.animate([{ scale: s }, { scale: 1 }], { duration: d, easing: "cubic-bezier(.2,.8,.2,1)" });
-function filmTimeline() {
-  // pulsation sur chaque temps, gros coup sur chaque 808
-  const nb = Math.round(FILM_LEN / SONG.beat);
-  for (let b = 0; b < nb; b++) { const tt = b * SONG.beat, ph = b % 8 === 0; atA(tt, () => bump(ph ? 1.07 : b % 2 ? 1.012 : 1.025, ph ? 320 : 200)); }
-  SONG.hits.forEach((h) => { const tt = h - SONG.drop; if (tt > 0 && tt < FILM_LEN) atA(tt, () => { bump(1.06, 300); flash(.18); film.shake = 1.1; film.fov = 8; }); });
-  // un flash + secousse sur chaque début de partie (808), traits de vitesse juste avant
-  for (let k = 1; k <= 8; k++) { atA(k * P - .4, () => { warp(.8); }); atA(k * P, () => { flash(.32); film.shake = 1.5; film.fov = 14; }); }
-  film.sched = true;
-  const lvl = Math.floor(D.total / 1000) + 1, name = LV.filter((l) => lvl >= l[0]).pop()[1], best = D.series.reduce((a, p) => p[1] > a[1] ? p : a, D.series[0]);
-  const rt = Object.values(D.reg).reduce((a, b) => a + b, 0);
-  // 0 – 3 s : ouverture
-  bubbleField(40); flash(.9);
-  at(.3, () => say("k", "ELDORADO · " + MOIS[new Date(D.maj).getMonth()].replace(".", "").toUpperCase() + " " + new Date(D.maj).getFullYear(), 50, 36, 2.6, { dy: -30 }));
-  at(.9, () => say("big", "LE BILAN", 50, 52, 2.0, { speed: 70, dx: 40 }));
-  // 3 – 7.5 s : bénéfice
-  at(3.1, () => { flash(.5); say("k", "BÉNÉFICE NET", 50, 28, 4.1, { dy: -20 }); });
-  at(3.5, () => { const el = say("big", "0 $", 50, 50, 3.8, { instant: true, dx: 0, dy: 0 }); countIn(el, D.total, 1.8); });
-  at(5.3, () => { shock(50, 50); bubbleField(30); burst(innerWidth / 2, innerHeight / 2, innerWidth / 2, innerHeight * 1.2, 80); });
-  at(5.6, () => say("sm", "depuis le 21 septembre", 50, 68, 1.8));
-  // 7.5 – 11.5 s : aujourd'hui
-  at(7.6, () => say("k", "AUJOURD'HUI", 50, 26, 3.7));
-  at(7.9, () => { const el = say("big", "+0 $", 50, 48, 3.4, { instant: true, dx: -30 }); countIn(el, D.jour, 1.2, " $", "+"); rain(90); });
-  bubble(20, 66, 190, D.comptes, "COMPTES", 2.9, 8.5); bubble(80, 64, 210, Math.round(100 * D.jour / D.objectif) + "%", "OBJECTIF 200 $", 2.8, 8.8); bubble(50, 80, 150, "🔥 " + D.streak, "JOURS DE SÉRIE", 2.4, 9.2);
-  at(9.1, () => shock(50, 48, "#4cf0a5"));
-  // 11.5 – 15.5 s : trajectoire
-  at(11.6, () => { say("k", "LA TRAJECTOIRE", 50, 16, 4); say("mid", "0 → " + fmt(D.total) + " $ EN " + D.series.length + " JOURS", 50, 24, 3.9, { speed: 28 }); filmChart(11.8, 2.8 * film.k); });
-  bubble(13, 22, 150, fmt(D.comptesTotal), "COMPTES VENDUS", 2.2, 13.6); bubble(87, 22, 150, fmt(D.ventesTotal) + " $", "ENCAISSÉS", 2.0, 13.9);
-  // 16 – 21 s : globe
-  at(16.0, () => { flash(.4); say("k", Object.keys(D.reg).length + " SERVEURS · " + fmt(rt) + " COMPTES", 50, 14, 4.6); });
-  Object.entries(D.reg).sort((a, b) => b[1] - a[1]).forEach(([k, v], i) => { const pos = [[18, 36], [82, 34], [14, 68], [86, 66], [30, 84], [70, 84], [50, 30]][i] || [50, 50];
-    bubble(pos[0], pos[1], 110 + 120 * v / Math.max(...Object.values(D.reg)), k, fmt(v) + " · " + Math.round(100 * v / rt) + "%", 4.2 - i * .25, 16.5 + i * .3);
-    at(16.6 + i * .3, () => pulse(k)); });
-  // 21 – 25.5 s : ville
-  at(21.2, () => { const s0 = performance.now(); (function g2(n) { film.grow = Math.min(1, (n - s0) / 1800); if (film.grow < 1 && film.on) requestAnimationFrame(g2); })(s0); say("big", "CHAQUE JOUR", 50, 30, 3.9, { speed: 45, dx: -60 }); });
-  at(22.0, () => say("big", "UNE TOUR", 50, 52, 3.1, { speed: 60, dx: 60 }));
-  at(23.0, () => { say("mid", "RECORD " + fmt(best[1]) + " $ · " + dayLabel(best[0]).toUpperCase(), 50, 72, 2.1, { speed: 30 }); shock(50, 60, "#ff4fb4"); });
-  { const tv = D.log.reduce((a, o) => (+o.p > +a.p ? o : a), D.log[0] || { p: 0, t: "" }); if (tv && tv.p) bubble(14, 78, 160, (+tv.p).toFixed(2) + " $", "TOP VENTE · " + (tv.r || "LoL"), 2.2, 23.6); }
-  // 25.5 – 29.5 s : heures
-  at(25.8, () => say("k", "HEURE DE POINTE", 50, 26, 3.4));
-  at(26.1, () => { say("big", peak[1] + " H", 50, 48, 3.1, { speed: 120 }); shock(50, 48, "#4fe3ff"); bubbleField(35); });
-  at(27.0, () => say("mid", "LE " + ["LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI", "DIMANCHE"][peak[0]] + " SURTOUT", 50, 68, 2.2, { speed: 30 }));
-  // 29.5 – 33.5 s : niveau
-  at(29.8, () => say("k", "NIVEAU", 30, 30, 3.5));
-  at(30.1, () => { say("big", lvl + " · " + name, 34, 46, 3.2, { speed: 70 }); shock(70, 50, "#ffc861"); });
-  at(30.8, () => { const el = say("mid", "", 34, 64, 2.6, { instant: true }); el.innerHTML = `<div class="fxp"><i></i></div>`; setTimeout(() => (el.querySelector("i").style.width = (D.total % 1000) / 10 + "%"), 80); });
-  at(31.3, () => { const el = say("mid", "", 34, 76, 2.1, { instant: true }); const B = [["📦", D.comptesTotal >= 1000], ["🔥", D.streak >= 14], ["⚡", ((D.bestDay && D.bestDay.v) || best[1]) >= 500], ["💎", D.ventesTotal >= 10000], ["👑", D.total >= 10000]];
-    el.innerHTML = `<div class="fbadges">${B.map((b, i) => `<i style="animation-delay:${i * .12}s;opacity:${b[1] ? 1 : .3}">${b[0]}</i>`).join("")}</div>`; });
-  // 33.5 – 38.5 s : final
-  at(34.0, () => { flash(.6); say("k", "PROCHAIN CAP", 50, 34, 3.6); });
-  at(34.4, () => { say("big", fmt(lvl * 1000) + " $", 50, 52, 3.2, { speed: 80 }); bubbleField(60); rain(60); });
-  at(36.2, () => { shock(50, 52); burst(innerWidth / 2, innerHeight / 2, innerWidth / 2, -100, 120); });
-  at(37.0, () => { say("mid", "ELDORADO", 50, 72, 1.5, { speed: 40 }); say("sm", fmt(D.total) + " $ · " + fmt(D.comptesTotal) + " comptes · " + D.series.length + " jours", 50, 81, 1.5, { speed: 14 }); });
-  at(38.6, () => { flash(1); stopFilm(); });
-  film.sched = false;
+function buildEdit() {
+  const C1 = coin.position, C2 = new THREE.Vector3(5, 0, -216), G = new THREE.Vector3(7, 0, -62), VX = new THREE.Vector3(0, -2, -200);
+  const best = D.series.reduce((x, p) => p[1] > x[1] ? p : x, D.series[0]), lvl = Math.floor(D.total / 1000) + 1, name = LV.filter((l) => lvl >= l[0]).pop()[1];
+  const regs = Object.entries(D.reg).sort((x, y) => y[1] - x[1]), rt = regs.reduce((s, r) => s + r[1], 0);
+  const bt = towers.reduce((x, tw) => tw.userData.h > x.userData.h ? tw : x, towers[0]), TB = new THREE.Vector3(bt.position.x, 0, bt.position.z).add(city.position), top = TB.y + bt.userData.h;
+  const C = city.position, jourNom = ["LUNDI", "MARDI", "MERCREDI", "JEUDI", "VENDREDI", "SAMEDI", "DIMANCHE"][peak[0]];
+  const obj = Math.round(100 * D.jour / D.objectif);
 
+  // ---- rythme : chaque temps pulse, chaque phrase (808) = impact ----
+  for (let n = 0; n < 80; n++) qAt(n * B, () => { if (n % 8 === 0) { imp(80); flash(.35); film.shake = 1.6; film.fov = -12; punch(1.1, 300); rgb(200); } else punch(n % 2 ? 1.012 : 1.03, 180); });
+  SONG.hits.forEach((h) => { const tt = h - SONG.drop; if (tt > 0 && tt < 80 * B) qAt(tt, () => { imp(60); film.shake = 1.2; film.fov = -8; punch(1.07, 250); rgb(); }); });
+
+  // ---- INTRO (le son monte) ----
+  bubbleField(10);
+  shot(-6, 3, { p0: V(C1, 0, 0, 20), p1: V(C1, 0, 0, 13), l0: V(C1), f0: 46, f1: 40, e: "lin" });
+  slam(-6, "k", "ELDORADO PRÉSENTE", 30, 3);
+  [["3", 0, 1.8, -2], ["2", -3, -1.5, 3], ["1", 0, 4, 2.5]].forEach(([n, dx, dy, dz], i) => {
+    shot(i - 3, 1, { p0: V(C1, dx * 2.4 + 3, dy * 1.6, dz + 10), p1: V(C1, dx * 2 + 2.5, dy * 1.3, dz + 8.5), l0: V(C1), f0: 40 - i * 4, f1: 34 - i * 4, r0: (i - 1) * .25, r1: 0 });
+    slam(i - 3, "xl cd", n, 52, .95); qAt((i - 3) * B, () => { film.fov = -10; punch(1.12, 200); rgb(120); }); });
+  qAt(-.5 * B, () => document.body.classList.add("blk"));
+  qAt(0, () => document.body.classList.remove("blk"));
+
+  // ---- 1 · BÉNÉFICE (0–7) ----
+  shot(0, 2, { p0: V(C1, 0, 0, 24), p1: V(C1, 0, 0, 13), l0: V(C1), f0: 85, f1: 55 });
+  shot(2, 2, { p0: V(C1, 12, 5, 8), p1: V(C1, 9, 3, 7), l0: V(C1), r0: .3, r1: 0 });
+  shot(4, 2, { p0: V(C1, -8, -5, 9), p1: V(C1, -6, -4, 7.5), l0: V(C1), r0: -.25, r1: 0 });
+  shot(6, 2, { p0: V(C1, 0, 0, 9), p1: V(C1, 0, 0, 7.5), l0: V(C1), f0: 45, f1: 36 });
+  slam(0, "k", "BÉNÉFICE NET", 26, 8);
+  slam(0, "xl", "0 $", 52, 8, 50, (el) => countIn(el, D.total, 1.1));
+  slam(4, "sm", "depuis le 21 septembre", 72, 4);
+  qAt(2 * B, () => burst(innerWidth / 2, innerHeight / 2, innerWidth / 2, innerHeight * 1.2, 90));
+
+  // ---- 2 · AUJOURD'HUI (8–15) : traversée des étoiles ----
+  shot(8, 2, { p0: [0, 0, -18], p1: [0, 0, -34], l0: [0, 0, -60], f0: 95, f1: 62, r0: 0, r1: .25 });
+  shot(10, 2, { p0: [-7, 3, -30], p1: [-3, 1, -42], l0: [0, 0, -70], r0: -.35, r1: 0 });
+  shot(12, 2, { p0: [5, -3, -38], p1: [2, -1, -48], l0: [0, 0, -80], r0: .2, r1: -.1 });
+  shot(14, 2, { p0: [0, 7, -44], p1: [0, 3, -50], l0: V(G), f0: 70, f1: 50 });
+  slam(8, "k", "AUJOURD'HUI", 26, 4);
+  slam(8, "xl", "+0 $", 52, 4, 50, (el) => countIn(el, D.jour, .8, " $", "+"));
+  slam(12, "xl", String(D.comptes), 48, 2); slam(12, "k", "COMPTES VENDUS", 70, 2);
+  slam(14, "xl", obj + " %", 48, 2); slam(14, "k", "DE L'OBJECTIF · " + D.objectif + " $", 70, 2);
+  qAt(10 * B, () => rain(90));
+
+  // ---- 3 · TRAJECTOIRE (16–23) ----
+  shot(16, 8, { p0: [-12, 3, -78], p1: [-5, 1, -100], l0: [0, -3, -124], e: "io", r0: .1, r1: -.05 });
+  slam(16, "k", "LA TRAJECTOIRE", 15, 8);
+  slam(16, "mid", "0 → " + fmt(D.total) + " $ · " + D.series.length + " JOURS", 23, 8);
+  qAt(16 * B, () => filmChart(0, 5 * B));
+  qAt(20 * B, () => { bubble(13, 22, 150, fmt(D.comptesTotal), "COMPTES VENDUS", 4 * B, 0); bubble(87, 22, 150, fmt(D.ventesTotal) + " $", "ENCAISSÉS", 4 * B, 0); });
+
+  // ---- 4 · LE MONDE (24–31) : un serveur par temps ----
+  regs.slice(0, 6).forEach(([k, v], i) => { const an = i * 1.15 + .4, R0 = 17, R1 = 13.5, y = (i % 2 ? -1 : 1) * 3;
+    shot(24 + i, 1, { p0: V(G, Math.sin(an) * R0, y, Math.cos(an) * R0), p1: V(G, Math.sin(an) * R1, y * .7, Math.cos(an) * R1), l0: V(G), r0: (i % 2 ? .2 : -.2), r1: 0 });
+    qAt((24 + i) * B, () => { flyReg(k); if (flight) flight.d = 380; });
+    slam(24 + i, "xl", k, 46, 1); slam(24 + i, "k", fmt(v) + " COMPTES · " + Math.round(100 * v / rt) + " %", 68, 1); });
+  shot(30, 2, { p0: V(G, 0, 0, 12), p1: V(G, 0, 0, 30), l0: V(G), f0: 40, f1: 75, r0: 0, r1: .6 });
+  slam(30, "mid", regs.length + " SERVEURS · " + fmt(rt) + " COMPTES", 80, 2);
+
+  // ---- 5 · LA VILLE (32–39) : vue d'en bas, on monte jusqu'au record ----
+  qAt(32 * B, () => { const s0 = performance.now(); (function g2(n) { film.grow = Math.min(1, (n - s0) / 650); if (film.grow < 1 && film.on) requestAnimationFrame(g2); })(s0); });
+  shot(32, 4, { p0: V(TB, 1.9, .4, 1.9), p1: V(TB, 1.7, bt.userData.h + 1.4, 1.7), l0: [TB.x, top + 2, TB.z], l1: [TB.x, top - .3, TB.z], f0: 88, f1: 58, e: "in", r0: .15, r1: 0 });
+  slam(32, "k", "CHAQUE JOUR = UNE TOUR", 18, 4);
+  slam(34, "ol", "PLUS HAUT", 50, 2);
+  shot(36, 2, { p0: [TB.x + 7, top + 7, TB.z + 7], p1: [TB.x + 4.5, top + 4.5, TB.z + 4.5], l0: [TB.x, top, TB.z], r0: -.2, r1: 0 });
+  slam(36, "xl", fmt(best[1]) + " $", 46, 2); slam(36, "k", "RECORD · " + dayLabel(best[0]).toUpperCase(), 68, 2);
+  qAt(36 * B, () => { bt.userData.bump = performance.now(); burst(innerWidth / 2, innerHeight * .45, innerWidth / 2, -80, 70); });
+  shot(38, 2, { p0: [C.x, C.y + 26, C.z + .01], p1: [C.x, C.y + 33, C.z + .01], l0: [C.x, C.y, C.z], r0: 0, r1: 1.4, e: "lin" });
+  slam(38, "mid", D.series.length + " JOURS · " + D.series.length + " TOURS", 80, 2);
+
+  // ---- 6 · HEURE DE POINTE (40–47) : plongée dans le vortex ----
+  shot(40, 4, { p0: V(VX, 0, 18, 9), p1: V(VX, 0, 4, 1.5), l0: V(VX), f0: 55, f1: 95, e: "in", r0: 0, r1: 2.4 });
+  slam(40, "k", "HEURE DE POINTE", 24, 4); slam(40, "xl", peak[1] + " H", 50, 4);
+  shot(44, 4, { p0: V(VX, 13, 3, 10), p1: V(VX, 7, 1, 5), l0: V(VX), r0: .35, r1: -.2 });
+  slam(44, "mid", "LE " + jourNom + " SURTOUT", 50, 4);
+  qAt(44 * B, () => bubbleField(30));
+
+  // ---- 7 · NIVEAU (48–55) ----
+  shot(48, 2, { p0: V(C2, 0, 0, 34), p1: V(C2, 0, 0, 20), l0: V(C2), f0: 75, f1: 52 });
+  shot(50, 2, { p0: V(C2, 16, 7, 12), p1: V(C2, 12, 5, 10), l0: V(C2), r0: .3, r1: 0 });
+  shot(52, 2, { p0: V(C2, -13, -6, 13), p1: V(C2, -10, -4, 11), l0: V(C2), r0: -.25, r1: 0 });
+  shot(54, 2, { p0: V(C2, 0, 0, 15), p1: V(C2, 0, 0, 13), l0: V(C2), f0: 42, f1: 36 });
+  slam(48, "k", "NIVEAU", 26, 2); slam(48, "xl", String(lvl), 50, 2);
+  slam(50, "xl", name, 50, 2);
+  slam(52, "mid", "", 50, 2, 50, (el) => { el.innerHTML = `<div class="fxp"><i></i></div>`; setTimeout(() => (el.querySelector("i").style.width = (D.total % 1000) / 10 + "%"), 60); });
+  slam(52, "k", fmt(D.total % 1000) + " / 1 000 $", 64, 2);
+  slam(54, "mid", "", 50, 2, 50, (el) => { const BB = [["📦", D.comptesTotal >= 1000], ["🔥", D.streak >= 14], ["⚡", ((D.bestDay && D.bestDay.v) || best[1]) >= 500], ["💎", D.ventesTotal >= 10000], ["👑", D.total >= 10000]];
+    el.innerHTML = `<div class="fbadges">${BB.map((b, i) => `<i style="animation-delay:${i * .07}s;opacity:${b[1] ? 1 : .3}">${b[0]}</i>`).join("")}</div>`; });
+
+  // ---- 8 · PROCHAIN CAP (56–63) : vitesse lumière ----
+  shot(56, 4, { p0: [0, 0, -228], p1: [0, 0, -262], l0: [0, 0, -330], f0: 70, f1: 110, e: "in", r0: 0, r1: .5 });
+  qAt(56 * B, () => warp(4 * B, 0)); slam(56, "k", "PROCHAIN CAP", 30, 4); slam(57, "ol", "NIVEAU " + (lvl + 1), 52, 3);
+  shot(60, 4, { p0: [0, 0, -266], p1: [0, 0, -271], l0: [0, 0, -330], f0: 52, f1: 42 });
+  slam(60, "xl", fmt(lvl * 1000) + " $", 50, 4);
+  qAt(60 * B, () => { rain(90); bubbleField(40); });
+  qAt(62 * B, () => { shock(50, 50); burst(innerWidth / 2, innerHeight / 2, innerWidth / 2, -100, 110); });
+
+  // ---- 9 · RÉCAP ÉCLAIR (64–71) : une coupe par temps ----
+  const M = [
+    [V(C1, 0, 0, 14), V(C1, 0, 0, 11), V(C1), fmt(D.total) + " $", "BÉNÉFICE"],
+    [V(G, 0, 0, 18), V(G, 0, 0, 15), V(G), regs.length + " SERVEURS", "MONDE"],
+    [[TB.x + 4, top + 3, TB.z + 4], [TB.x + 3, top + 2, TB.z + 3], [TB.x, top, TB.z], fmt(best[1]) + " $", "RECORD"],
+    [[0, 2, -26], [0, 1, -38], [0, 0, -70], "+" + fmt(D.jour) + " $", "AUJOURD'HUI"],
+    [V(VX, 0, 14, 6), V(VX, 0, 9, 3), V(VX), peak[1] + " H", "HEURE DE POINTE"],
+    [V(C2, 0, 0, 24), V(C2, 0, 0, 19), V(C2), "NIV. " + lvl, name],
+    [V(G, 10, 4, 10), V(G, 8, 3, 8), V(G), fmt(D.comptesTotal), "COMPTES"],
+    [[C.x + 14, C.y + 10, C.z + 14], [C.x + 11, C.y + 8, C.z + 11], [C.x, C.y, C.z], D.streak + " J 🔥", "SÉRIE"],
+  ];
+  M.forEach(([p0, p1, l0, big, small], i) => { shot(64 + i, 1, { p0, p1, l0, r0: (i % 2 ? .3 : -.3), r1: 0, f0: 70, f1: 50 }); slam(64 + i, "xl", big, 48, 1); slam(64 + i, "k", small, 70, 1); });
+
+  // ---- 10 · ELDORADO (72–80) ----
+  shot(72, 8, { p0: [0, 0, -236], p1: [0, 0, -300], l0: [0, 0, -340], f0: 60, f1: 44, e: "io" });
+  slam(72, "xl", "ELDORADO", 46, 8);
+  slam(74, "sm", fmt(D.total) + " $ · " + fmt(D.comptesTotal) + " comptes · " + D.series.length + " jours", 66, 6);
+  qAt(72 * B, () => { bubbleField(60); burst(innerWidth / 2, innerHeight / 2, innerWidth / 2, -100, 140); });
+  for (let h = 76; h < 80; h += .5) qAt(h * B, () => { imp(50); punch(1.05, 150); });
+  qAt(80 * B, () => { flash(1); stopFilm(); });
 }
 function stopFilm() {
   film.timers.forEach(clearTimeout); film.timers = []; film.on = false; film.grow = 1; FL.querySelectorAll(".ft,.fb,.shock").forEach((e) => e.remove()); bubs = [];
-  document.body.classList.remove("filming"); $("auto").classList.remove("on"); $("auto").textContent = "▶ FILM"; CAM.fov = 55; CAM.updateProjectionMatrix(); film.sched = false; film.cam = null; film.q = []; film.k = 1; const a = MUSIC.el; if (a && !a.paused) { const v0 = a.volume, s = performance.now(); (function fd(n) { const k = (n - s) / 1400; if (k >= 1 || film.on) { if (!film.on) a.pause(); a.volume = 1; return; } a.volume = Math.max(0, Math.min(1, v0 * (1 - Math.max(0, k)))); requestAnimationFrame(fd); })(s); }
+  document.body.classList.remove("filming"); $("auto").classList.remove("on"); $("auto").textContent = "▶ FILM"; CAM.fov = 55; CAM.updateProjectionMatrix(); film.sched = false; film.cam = null; film.q = []; film.k = 1; film.shot = null; document.body.classList.remove("imp", "blk", "rgb"); const a = MUSIC.el; if (a && !a.paused) { const v0 = a.volume, s = performance.now(); (function fd(n) { const k = (n - s) / 1400; if (k >= 1 || film.on) { if (!film.on) a.pause(); a.volume = 1; return; } a.volume = Math.max(0, Math.min(1, v0 * (1 - Math.max(0, k)))); requestAnimationFrame(fd); })(s); }
 }
 
 // ---------- Warp (traits de vitesse entre les chapitres) ----------
@@ -884,12 +961,12 @@ function warp(d = .9, v = .2) { warpT = performance.now(); warpDur = d * 1000; w
 })(0);
 
 // ---------- HUD caméra (REC, chrono, chapitre, progression) ----------
-const CHAPS = [[0, "INTRO"], [3, "01 · BÉNÉFICE NET"], [7.5, "02 · AUJOURD'HUI"], [11.5, "03 · TRAJECTOIRE"], [16, "04 · LE MONDE"], [21, "05 · LA VILLE"], [25.5, "06 · HEURE DE POINTE"], [29.5, "07 · NIVEAU"], [33.5, "08 · PROCHAIN CAP"]];
+const CHAPS = [[-99, "INTRO"], [0, "01 · BÉNÉFICE NET"], [8, "02 · AUJOURD'HUI"], [16, "03 · TRAJECTOIRE"], [24, "04 · LE MONDE"], [32, "05 · LA VILLE"], [40, "06 · HEURE DE POINTE"], [48, "07 · NIVEAU"], [56, "08 · PROCHAIN CAP"], [64, "09 · RÉCAP"], [72, "10 · ELDORADO"]];
 (function recl() {
   if (film.on) { const tt = filmClock(), u = Math.max(0, tt + OFF);
     $("recT").textContent = "00:" + String(Math.floor(u)).padStart(2, "0") + ":" + String(Math.floor((u % 1) * 24)).padStart(2, "0");
     $("recBar").style.width = Math.min(100, u / (FILM_LEN + OFF) * 100) + "%";
-    $("recCh").textContent = tt < 0 ? "DÉCOMPTE" : CHAPS.filter((c) => tt >= W(c[0])).pop()[1]; }
+    $("recCh").textContent = tt < 0 ? "DÉCOMPTE" : CHAPS.filter((c) => tt >= c[0] * SONG.beat).pop()[1]; }
   requestAnimationFrame(recl);
 })();
 
