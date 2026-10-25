@@ -184,6 +184,27 @@ body.filming .toast { opacity: 0; }
 .fbadges i { font-style: normal; font-size: clamp(34px, 4.5vw, 70px); display: inline-block; animation: bubin .8s cubic-bezier(.2,1.8,.3,1) both; filter: drop-shadow(0 0 20px rgba(255,200,97,.8)); }
 .fxp { width: min(60vw, 760px); height: 14px; border-radius: 14px; background: rgba(255,255,255,.1); overflow: hidden; }
 .fxp i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--gold), var(--rose), var(--violet)); box-shadow: 0 0 30px var(--rose); transition: width 1.6s cubic-bezier(.16,1,.3,1); }
+/* ---- Film v5 : glitch, warp, HUD caméra ---- */
+.ft.big.gl { animation: zin .75s cubic-bezier(.16,1,.3,1) both, drift var(--dd, 5s) linear both, glitch .8s steps(1) both; }
+.ft.big.gl.out { animation: zout .55s cubic-bezier(.7,0,.84,0) forwards; }
+@keyframes glitch {
+  0% { filter: drop-shadow(-14px 0 0 #ff2e6a) drop-shadow(14px 0 0 #2ee6ff); clip-path: inset(0 0 55% 0); }
+  12% { filter: drop-shadow(10px 0 0 #ff2e6a) drop-shadow(-10px 0 0 #2ee6ff); clip-path: inset(40% 0 10% 0); }
+  24% { filter: drop-shadow(-6px 0 0 #ff2e6a) drop-shadow(6px 0 0 #2ee6ff); clip-path: inset(15% 0 30% 0); }
+  36% { filter: drop-shadow(4px 0 0 #ff2e6a) drop-shadow(-4px 0 0 #2ee6ff); clip-path: none; }
+  50%, 100% { filter: drop-shadow(0 0 50px rgba(255,79,180,.55)); clip-path: none; } }
+.ft.cd { font-size: clamp(120px, 26vw, 420px); }
+#warp { position: absolute; inset: 0; width: 100%; height: 100%; }
+#rec { position: fixed; inset: 0; z-index: 60; pointer-events: none; opacity: 0; transition: opacity .4s; font: 600 11px var(--f-mono); letter-spacing: .25em; color: rgba(255,255,255,.72); text-transform: uppercase; }
+body.filming #rec { opacity: 1; }
+#rec > div { position: absolute; display: flex; gap: 12px; align-items: center; white-space: nowrap; }
+#rec .tl { top: 2.1vh; left: 3vw; } #rec .tr { top: 2.1vh; right: 3vw; color: var(--gold); }
+#rec .bl { bottom: 2.1vh; left: 3vw; } #rec .br { bottom: 2.1vh; right: 3vw; color: rgba(255,255,255,.45); }
+#rec .tl i { width: 9px; height: 9px; border-radius: 50%; background: #ff3b5c; box-shadow: 0 0 12px #ff3b5c; animation: blink 1s steps(1) infinite; }
+#rec .bar { left: 0; bottom: calc(6vh - 2px); height: 2px; width: 0; background: linear-gradient(90deg, var(--violet), var(--rose), var(--gold)); box-shadow: 0 0 14px var(--rose); }
+#rec .cor { width: 26px; height: 26px; border: 2px solid rgba(255,255,255,.35); }
+#rec .c1 { top: 8vh; left: 2.4vw; border-right: 0; border-bottom: 0; } #rec .c2 { top: 8vh; right: 2.4vw; border-left: 0; border-bottom: 0; }
+#rec .c3 { bottom: 8vh; left: 2.4vw; border-right: 0; border-top: 0; } #rec .c4 { bottom: 8vh; right: 2.4vw; border-left: 0; border-top: 0; }
 @media (prefers-reduced-motion: reduce) { .reveal > *, .odo .d i, .reg .bar i, .xp i { transition: none !important; } .feed li, .scrollcue i::after { animation: none; } }
 </style>
 
@@ -196,7 +217,7 @@ body.filming .toast { opacity: 0; }
 <div class="hud">
   <div class="brand"><div class="logo">E</div><div><b>ELDORADO</b><small id="maj"></small></div></div>
   <div class="player">
-    <div class="btns"><button id="prev" aria-label="Chapitre précédent">◀</button><button id="auto" aria-label="Lancer le film">▶ FILM</button><button id="next" aria-label="Chapitre suivant">▶▶</button></div>
+    <div class="btns"><button id="prev" aria-label="Chapitre précédent">◀</button><button id="auto" aria-label="Lancer le film">▶ FILM</button><button id="snd" aria-label="Son du film" aria-pressed="true">🔊</button><button id="next" aria-label="Chapitre suivant">▶▶</button></div>
     <div class="track"><div class="t" id="trackT">01 · <em>Le total</em></div><div class="segs" id="segs"></div></div>
     <div class="tools"><button id="replay" title="Rejouer les dernières ventes">↻</button></div>
   </div>
@@ -282,7 +303,8 @@ body.filming .toast { opacity: 0; }
   </section>
 </main>
 
-<div id="film"><canvas id="fchart"></canvas></div><div id="flash"></div>
+<div id="film"><canvas id="warp"></canvas><canvas id="fchart"></canvas></div><div id="flash"></div>
+<div id="rec" aria-hidden="true"><div class="tl"><i></i>REC <span id="recT">00:00:00</span></div><div class="tr" id="recTop">ELDORADO</div><div class="bl" id="recCh"></div><div class="br">CAM 01 · 60 FPS · 4K</div><div class="bar" id="recBar"></div><div class="cor c1"></div><div class="cor c2"></div><div class="cor c3"></div><div class="cor c4"></div></div>
 <aside class="feed"><h3><span>EN DIRECT</span><em id="feedN" style="font-style:normal"></em></h3><ul id="feed"></ul></aside>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -373,7 +395,7 @@ function onReveal(r) {
 
 // Lecture automatique : le film de 38 s
 $("auto").onclick = () => (film.on ? stopFilm() : startFilm());
-addEventListener("keydown", (e) => { if (e.key === "Escape" && film.on) stopFilm(); if (e.key.toLowerCase() === "f" && !film.on) startFilm(); if (e.key === "ArrowRight") goTo(chState().idx + 1); if (e.key === "ArrowLeft") goTo(chState().idx - 1); });
+addEventListener("keydown", (e) => { if (e.key === "Escape" && film.on) stopFilm(); if (e.key.toLowerCase() === "f" && !film.on) startFilm(); if (e.key.toLowerCase() === "m") $("snd").click(); if (e.key === "ArrowRight") goTo(chState().idx + 1); if (e.key === "ArrowLeft") goTo(chState().idx - 1); });
 
 // ---------------- Scène WebGL ----------------
 const has3D = typeof THREE !== "undefined";
@@ -693,7 +715,8 @@ const at = (sec, fn) => film.timers.push(setTimeout(fn, sec * 1000));
 const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$#@%&";
 // texte qui s'écrit, lettre par lettre, avec un brouillage façon « décodage »
 function say(cls, text, x, y, life, opt = {}) {
-  const el = document.createElement("div"); el.className = "ft " + cls;
+  const el = document.createElement("div"); el.className = "ft " + cls + (cls.includes("big") ? " gl" : "");
+  if (cls.includes("big") && !opt.instant) SFX("whoosh", .1);
   el.style.setProperty("--x", x + "%"); el.style.setProperty("--y", y + "%"); el.style.setProperty("--dd", life + "s");
   const dx = opt.dx ?? (Math.random() - .5) * 60, dy = opt.dy ?? (Math.random() - .5) * 30;
   el.style.setProperty("--tx", dx + "px"); el.style.setProperty("--ty", dy + "px");
@@ -708,14 +731,14 @@ function say(cls, text, x, y, life, opt = {}) {
   return el;
 }
 function countIn(el, to, dur, suffix = " $", prefix = "") {
-  const s = performance.now(); (function st(n) { const k = Math.min(1, (n - s) / (dur * 1000)), e = 1 - Math.pow(1 - k, 4); el.textContent = prefix + fmt(to * e) + suffix; if (k < 1 && film.on) requestAnimationFrame(st); })(s);
+  const s = performance.now(); let last = -1; (function st(n) { const k = Math.min(1, (n - s) / (dur * 1000)), e = 1 - Math.pow(1 - k, 4), v = Math.floor(to * e); el.textContent = prefix + fmt(to * e) + suffix; if (v !== last && k < .97 && Math.random() < .5) SFX("tick"); last = v; if (k < 1 && film.on) requestAnimationFrame(st); else if (film.on) SFX("coin"); })(s);
 }
 function bubble(x, y, size, big, small, life, delay = 0) {
   at(delay, () => { const b = document.createElement("div"); b.className = "fb"; b.style.setProperty("--x", x + "%"); b.style.setProperty("--y", y + "%"); b.style.setProperty("--s", size + "px"); b.style.setProperty("--fx2", ((Math.random() - .5) * 30) + "px");
-    b.innerHTML = `<div><b>${big}</b><span>${small}</span></div>`; FL.appendChild(b);
+    b.innerHTML = `<div><b>${big}</b><span>${small}</span></div>`; FL.appendChild(b); SFX("pop", 420 + Math.random() * 500);
     film.timers.push(setTimeout(() => { b.classList.add("out"); film.timers.push(setTimeout(() => b.remove(), 500)); }, life * 1000)); });
 }
-function shock(x = 50, y = 50, color) { const d = document.createElement("div"); d.className = "shock"; d.style.setProperty("--x", x + "%"); d.style.setProperty("--y", y + "%"); if (color) { d.style.borderColor = color; d.style.boxShadow = `0 0 40px ${color}`; } FL.appendChild(d); setTimeout(() => d.remove(), 1100); film.shake = 1.2; film.fov = 9; }
+function shock(x = 50, y = 50, color) { const d = document.createElement("div"); d.className = "shock"; d.style.setProperty("--x", x + "%"); d.style.setProperty("--y", y + "%"); if (color) { d.style.borderColor = color; d.style.boxShadow = `0 0 40px ${color}`; } FL.appendChild(d); setTimeout(() => d.remove(), 1100); film.shake = 1.2; film.fov = 9; SFX("impact", .8); }
 function flash(a = .7) { const f = $("flash"); f.animate([{ opacity: a }, { opacity: 0 }], { duration: 500, easing: "ease-out" }); }
 function rain(n = 60) { for (let i = 0; i < n; i++) { const x = Math.random() * innerWidth; parts.push({ x, y: -20 - Math.random() * 200, vx: (Math.random() - .5) * 2, vy: 6 + Math.random() * 6, l: 0, m: 90, tx: x, ty: innerHeight + 80, h: Math.random() < .7 ? 42 : 325, r: 3 + Math.random() * 4 }); } }
 // bulles d'ambiance (canvas)
@@ -750,9 +773,28 @@ function filmChart(t0, dur) {
   })(st);
   at(dur + 1.1, () => c.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 400, fill: "forwards" }));
 }
+// ---------- Film v5 : décompte, son, warp, HUD ----------
+const OFF = 2.4; // durée du décompte avant le film
+const FILM_LEN = 39;
+const SFX = (fn, ...a) => { if (AU.on) try { AU[fn](AU.now() + .01, ...a); } catch (e) {} };
 function startFilm() {
-  if (film.on) return; queue = []; film.on = true; film.t0 = performance.now(); film.grow = 0; document.body.classList.add("filming"); $("auto").classList.add("on"); $("auto").textContent = "■";
+  if (film.on) return; queue = []; film.on = true; film.t0 = performance.now() + OFF * 1000; film.grow = 0; document.body.classList.add("filming"); $("auto").classList.add("on"); $("auto").textContent = "■";
   $("fchart").getAnimations().forEach((x) => x.cancel()); $("fchart").style.opacity = 1; $("fchart").getContext("2d").clearRect(0, 0, 9999, 9999);
+  $("recTop").textContent = "ELDORADO · " + dayLabel(D.maj.slice(0, 10)).toUpperCase() + " · " + D.maj.slice(11, 16);
+  if (AU.init()) score(AU.now() + OFF + .05);
+  // décompte 3 · 2 · 1
+  bubbleField(14);
+  ["3", "2", "1"].forEach((n, i) => at(i * .8, () => { say("big cd", n, 50, 52, .62, { instant: true, dx: 0, dy: 0 }); film.fov = 6; if (i === 0) say("k", "ELDORADO PRÉSENTE", 50, 24, 2.3, { dy: 0 }); }));
+  at(OFF - .35, () => warp(.7, .25));
+  at(OFF, filmTimeline);
+}
+// pulsation de l'image sur chaque grosse caisse
+function beatBumps() { for (let s = 0; s < 154; s += 2) { const tt = s * .25; if (isFull(tt)) at(tt, () => FL.animate([{ scale: 1.03 }, { scale: 1 }], { duration: 230, easing: "cubic-bezier(.2,.8,.2,1)" })); } }
+const isFull = (tt) => (tt >= 3 && tt < 11.5) || (tt >= 16 && tt < 33.5) || (tt >= 34 && tt < 38.5);
+function filmTimeline() {
+  beatBumps();
+  [[2.75, .9], [7.3, .8], [11.2, .9], [15.7, 1], [20.9, .9], [25.3, .8], [29.4, .8], [33.6, 1.1]].forEach(([tt, d]) => at(tt, () => { warp(d); film.fov = 14; }));
+  at(3.0, () => { flash(.35); film.shake = 1.4; });
   const lvl = Math.floor(D.total / 1000) + 1, name = LV.filter((l) => lvl >= l[0]).pop()[1], best = D.series.reduce((a, p) => p[1] > a[1] ? p : a, D.series[0]);
   const rt = Object.values(D.reg).reduce((a, b) => a + b, 0);
   // 0 – 3 s : ouverture
@@ -771,6 +813,7 @@ function startFilm() {
   at(9.1, () => shock(50, 48, "#4cf0a5"));
   // 11.5 – 15.5 s : trajectoire
   at(11.6, () => { say("k", "LA TRAJECTOIRE", 50, 16, 4); say("mid", "0 → " + fmt(D.total) + " $ EN " + D.series.length + " JOURS", 50, 24, 3.9, { speed: 28 }); filmChart(11.8, 2.8); });
+  bubble(13, 22, 150, fmt(D.comptesTotal), "COMPTES VENDUS", 2.2, 13.6); bubble(87, 22, 150, fmt(D.ventesTotal) + " $", "ENCAISSÉS", 2.0, 13.9);
   // 16 – 21 s : globe
   at(16.0, () => { flash(.4); say("k", Object.keys(D.reg).length + " SERVEURS · " + fmt(rt) + " COMPTES", 50, 14, 4.6); });
   Object.entries(D.reg).sort((a, b) => b[1] - a[1]).forEach(([k, v], i) => { const pos = [[18, 36], [82, 34], [14, 68], [86, 66], [30, 84], [70, 84], [50, 30]][i] || [50, 50];
@@ -780,6 +823,7 @@ function startFilm() {
   at(21.2, () => { const s0 = performance.now(); (function g2(n) { film.grow = Math.min(1, (n - s0) / 1800); if (film.grow < 1 && film.on) requestAnimationFrame(g2); })(s0); say("big", "CHAQUE JOUR", 50, 30, 3.9, { speed: 45, dx: -60 }); });
   at(22.0, () => say("big", "UNE TOUR", 50, 52, 3.1, { speed: 60, dx: 60 }));
   at(23.0, () => { say("mid", "RECORD " + fmt(best[1]) + " $ · " + dayLabel(best[0]).toUpperCase(), 50, 72, 2.1, { speed: 30 }); shock(50, 60, "#ff4fb4"); });
+  { const tv = D.log.reduce((a, o) => (+o.p > +a.p ? o : a), D.log[0] || { p: 0, t: "" }); if (tv && tv.p) bubble(14, 78, 160, (+tv.p).toFixed(2) + " $", "TOP VENTE · " + (tv.r || "LoL"), 2.2, 23.6); }
   // 25.5 – 29.5 s : heures
   at(25.8, () => say("k", "HEURE DE POINTE", 50, 26, 3.4));
   at(26.1, () => { say("big", peak[1] + " H", 50, 48, 3.1, { speed: 120 }); shock(50, 48, "#4fe3ff"); bubbleField(35); });
@@ -794,12 +838,94 @@ function startFilm() {
   at(34.0, () => { flash(.6); say("k", "PROCHAIN CAP", 50, 34, 3.6); });
   at(34.4, () => { say("big", fmt(lvl * 1000) + " $", 50, 52, 3.2, { speed: 80 }); bubbleField(60); rain(60); });
   at(36.2, () => { shock(50, 52); burst(innerWidth / 2, innerHeight / 2, innerWidth / 2, -100, 120); });
-  at(37.0, () => say("mid", "ELDORADO", 50, 74, 1.4, { speed: 40 }));
+  at(37.0, () => { say("mid", "ELDORADO", 50, 72, 1.5, { speed: 40 }); say("sm", fmt(D.total) + " $ · " + fmt(D.comptesTotal) + " comptes · " + D.series.length + " jours", 50, 81, 1.5, { speed: 14 }); });
   at(38.6, () => { flash(1); stopFilm(); });
+
 }
 function stopFilm() {
   film.timers.forEach(clearTimeout); film.timers = []; film.on = false; film.grow = 1; FL.querySelectorAll(".ft,.fb,.shock").forEach((e) => e.remove()); bubs = [];
-  document.body.classList.remove("filming"); $("auto").classList.remove("on"); $("auto").textContent = "▶ FILM"; CAM.fov = 55; CAM.updateProjectionMatrix();
+  document.body.classList.remove("filming"); $("auto").classList.remove("on"); $("auto").textContent = "▶ FILM"; CAM.fov = 55; CAM.updateProjectionMatrix(); AU.kill();
+}
+
+// ---------- Warp (traits de vitesse entre les chapitres) ----------
+const WC = $("warp"), wg = WC.getContext("2d"); let warpT = -1e9, warpDur = 1, wst = [];
+function warp(d = .9, v = .2) { warpT = performance.now(); warpDur = d * 1000; wst = Array.from({ length: 280 }, () => ({ a: Math.random() * 6.2832, r: Math.random() * .25, s: .5 + Math.random() * 1.7, h: [42, 325, 265, 190][Math.random() * 4 | 0] })); SFX("whoosh", v); }
+(function wl(now) {
+  const k = (now - warpT) / warpDur;
+  if (k >= 0 && k < 1 && film.on) {
+    const W = WC.width = innerWidth * devicePixelRatio, H = WC.height = innerHeight * devicePixelRatio, cx = W / 2, cy = H / 2, M = Math.hypot(cx, cy), it = Math.sin(Math.PI * k);
+    wg.lineCap = "round";
+    wst.forEach((p) => { const r0 = (p.r + k * p.s) * M * .9, r1 = r0 + it * M * .3 * p.s; wg.strokeStyle = `hsla(${p.h},100%,75%,${.85 * it})`; wg.lineWidth = (1 + p.s * 1.6) * devicePixelRatio; wg.beginPath(); wg.moveTo(cx + Math.cos(p.a) * r0, cy + Math.sin(p.a) * r0); wg.lineTo(cx + Math.cos(p.a) * r1, cy + Math.sin(p.a) * r1); wg.stroke(); });
+  } else if (WC.width) WC.width = 0;
+  requestAnimationFrame(wl);
+})(0);
+
+// ---------- HUD caméra (REC, chrono, chapitre, progression) ----------
+const CHAPS = [[0, "INTRO"], [3, "01 · BÉNÉFICE NET"], [7.5, "02 · AUJOURD'HUI"], [11.5, "03 · TRAJECTOIRE"], [16, "04 · LE MONDE"], [21, "05 · LA VILLE"], [25.5, "06 · HEURE DE POINTE"], [29.5, "07 · NIVEAU"], [33.5, "08 · PROCHAIN CAP"]];
+(function recl() {
+  if (film.on) { const tt = (performance.now() - film.t0) / 1000, u = Math.max(0, tt + OFF);
+    $("recT").textContent = "00:" + String(Math.floor(u)).padStart(2, "0") + ":" + String(Math.floor((u % 1) * 24)).padStart(2, "0");
+    $("recBar").style.width = Math.min(100, u / (FILM_LEN + OFF) * 100) + "%";
+    $("recCh").textContent = tt < 0 ? "DÉCOMPTE" : CHAPS.filter((c) => tt >= c[0]).pop()[1]; }
+  requestAnimationFrame(recl);
+})();
+
+// ================= SON : bande-son synthétisée (WebAudio, aucun fichier) =================
+let soundOn = true; try { soundOn = localStorage.getItem("eldo_snd") !== "0"; } catch (e) {}
+const setSnd = () => { $("snd").textContent = soundOn ? "🔊" : "🔇"; $("snd").setAttribute("aria-pressed", soundOn); };
+setSnd(); $("snd").onclick = () => { soundOn = !soundOn; try { localStorage.setItem("eldo_snd", soundOn ? "1" : "0"); } catch (e) {} setSnd(); if (!soundOn) AU.kill(); };
+const AU = {
+  ctx: null, out: null, rev: null, noise: null,
+  get on() { return !!this.ctx && soundOn; },
+  now() { return this.ctx.currentTime; },
+  init() {
+    if (!soundOn) return false; const C = window.AudioContext || window.webkitAudioContext; if (!C) return false;
+    const c = this.ctx = new C(), comp = c.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 5; comp.attack.value = .003;
+    this.out = c.createGain(); this.out.gain.value = .85; this.out.connect(comp); comp.connect(c.destination);
+    const len = c.sampleRate * 2.4, ir = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.8); }
+    this.rev = c.createConvolver(); this.rev.buffer = ir; const rg = c.createGain(); rg.gain.value = .32; this.rev.connect(rg); rg.connect(this.out);
+    const nb = c.createBuffer(1, c.sampleRate * 2, c.sampleRate), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1; this.noise = nb;
+    c.resume(); return true;
+  },
+  kill() { if (!this.ctx) return; const c = this.ctx, t = c.currentTime; this.ctx = null; try { this.out.gain.cancelScheduledValues(t); this.out.gain.setValueAtTime(this.out.gain.value, t); this.out.gain.linearRampToValueAtTime(0, t + .6); } catch (e) {} setTimeout(() => c.close(), 900); },
+  env(g, t, a, pk, d) { g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(pk, t + a); g.gain.exponentialRampToValueAtTime(.0001, t + a + d); },
+  osc(type, f, t, d, pk, dest, f2, a = .005) { const c = this.ctx, o = c.createOscillator(), g = c.createGain(); o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d); this.env(g, t, a, pk, d); o.connect(g); g.connect(dest || this.out); o.start(t); o.stop(t + a + d + .05); },
+  nz(t, d, pk, type, f, q, dest, f2) { const c = this.ctx, s = c.createBufferSource(), fl = c.createBiquadFilter(), g = c.createGain(); s.buffer = this.noise; s.loop = true; fl.type = type; fl.frequency.setValueAtTime(f, t); if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + d); fl.Q.value = q || 1; this.env(g, t, .004, pk, d); s.connect(fl); fl.connect(g); g.connect(dest || this.out); s.start(t, Math.random()); s.stop(t + d + .1); },
+  kick(t, v = 1) { this.osc("sine", 165, t, .36, .95 * v, null, 40); this.osc("triangle", 1100, t, .018, .22 * v, null, 140); },
+  hat(t, v = 1) { this.nz(t, .04, .07 * v, "highpass", 8500, .7); },
+  clap(t) { for (let i = 0; i < 3; i++) this.nz(t + i * .012, .1, .22, "bandpass", 1700, 1.3); this.nz(t, .22, .1, "bandpass", 1700, 1.2, this.rev); },
+  bass(t, f, d, v = .3) { const c = this.ctx, o = c.createOscillator(), o2 = c.createOscillator(), fl = c.createBiquadFilter(), g = c.createGain(); o.type = "sawtooth"; o2.type = "sine"; o.frequency.value = f; o2.frequency.value = f / 2; fl.type = "lowpass"; fl.frequency.setValueAtTime(1100, t); fl.frequency.exponentialRampToValueAtTime(160, t + d); fl.Q.value = 7; this.env(g, t, .008, v, d); o.connect(fl); o2.connect(g); fl.connect(g); g.connect(this.out); o.start(t); o2.start(t); o.stop(t + d + .05); o2.stop(t + d + .05); },
+  pad(t, fs, d, v = .055) { const c = this.ctx, fl = c.createBiquadFilter(), g = c.createGain(); fl.type = "lowpass"; fl.Q.value = 2; fl.frequency.setValueAtTime(450, t); fl.frequency.linearRampToValueAtTime(2400, t + d * .5); fl.frequency.linearRampToValueAtTime(800, t + d); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(v, t + .35); g.gain.setValueAtTime(v, t + Math.max(.4, d - .3)); g.gain.exponentialRampToValueAtTime(.0001, t + d + .5); fl.connect(g); g.connect(this.out); g.connect(this.rev);
+    fs.forEach((f) => [-9, 0, 9].forEach((det) => { const o = c.createOscillator(); o.type = "sawtooth"; o.frequency.value = f; o.detune.value = det; o.connect(fl); o.start(t); o.stop(t + d + .6); })); },
+  arp(t, f, v = .05) { this.osc("square", f, t, .12, v); this.osc("square", f * 2, t, .1, v * .35, this.rev); },
+  riser(t, d, v = .22) { this.nz(t, d, v, "bandpass", 300, 3, null, 8000); this.osc("sawtooth", 110, t, d, v * .22, null, 990, d * .85); },
+  impact(t, v = 1) { this.osc("sine", 95, t, 1.3, .95 * v, null, 30); this.nz(t, .5, .45 * v, "lowpass", 3500, .7, null, 150); this.nz(t, 1.8, .3 * v, "lowpass", 2600, .7, this.rev, 200); },
+  whoosh(t, v = .2) { this.nz(t, .5, v, "bandpass", 6000, 1.6, null, 280); },
+  coin(t) { [[1975, 0], [2637, .07], [3951, .14]].forEach(([f, o]) => { this.osc("triangle", f, t + o, .4, .14); this.osc("sine", f, t + o, .5, .05, this.rev); }); this.nz(t, .05, .12, "highpass", 6000, 1); },
+  pop(t, f = 660) { this.osc("sine", f * 1.7, t, .11, .16, null, f * .6); },
+  beep(t, f = 880, d = .2) { this.osc("square", f, t, d, .12); this.osc("sine", f, t, d + .3, .07, this.rev); },
+  tick(t) { this.nz(t, .012, .035, "highpass", 5000, 1); },
+};
+// Partition : 120 BPM, La mineur (Am – F – C – G), 2 s par mesure. T0 = début du film (après le décompte)
+function score(T0) {
+  const A = AU, CH = [[110, 130.81, 164.81], [87.31, 110, 130.81], [130.81, 164.81, 196], [98, 123.47, 146.83]], RT = [55, 43.65, 65.41, 49];
+  [-2.4, -1.6, -.8].forEach((x, i) => A.beep(T0 + x, 880, .22)); A.riser(T0 - 1.2, 1.15, .14);
+  A.impact(T0, 1); A.impact(T0 + 3, .9);
+  const arpOn = (tt) => (tt >= 16 && tt < 21) || (tt >= 30 && tt < 33.4) || (tt >= 34 && tt < 38.5);
+  for (let bar = 0; bar < 20; bar++) { const tt = bar * 2; if (tt >= 38.5) break; A.pad(T0 + tt, CH[bar % 4].map((f) => f * 2), 2, tt >= 11.5 && tt < 16 ? .07 : .045); }
+  for (let s = 0; s < 154; s++) {
+    const tt = s * .25, t = T0 + tt, bar = Math.floor(tt / 2) % 4, beat = s % 2 === 0, bn = (s / 2) % 4, full = isFull(tt);
+    if (full && beat) A.kick(t);
+    if (full && beat && (bn === 1 || bn === 3)) A.clap(t);
+    if (tt < 38.5) A.hat(t + (beat ? 0 : .01), full ? (beat ? .6 : 1) : .45);
+    if (full) A.bass(t, RT[bar] * (s % 4 === 3 ? 2 : 1), .22);
+    else if (tt < 3 && beat) A.bass(t, RT[bar], .4, .2);
+    if (arpOn(tt)) { const ch = CH[bar]; [0, 1].forEach((h) => A.arp(t + h * .125, ch[(s * 2 + h) % 3] * (h ? 8 : 4))); }
+  }
+  A.riser(T0 + 1.5, 1.5, .18); A.riser(T0 + 14.3, 1.7, .22); A.riser(T0 + 32, 2, .3);
+  A.impact(T0 + 16, .9); A.impact(T0 + 34, 1.1); A.impact(T0 + 38.6, 1.2);
+  A.pad(T0 + 38.5, [220, 261.63, 329.63, 440], 3.2, .06); A.bass(T0 + 38.5, 55, 2.5, .3);
 }
 
 // ---------------- Démarrage ----------------
